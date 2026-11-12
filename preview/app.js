@@ -116,6 +116,7 @@
   /* ---------- views ---------- */
   function render() {
     document.title = (D.title || 'Task Ripper') + ' PREVIEW';
+    document.documentElement.classList.toggle('rm', reduceMotion()); // theme: calm sparkles/shimmer under Reduce Motion
     $('#title').textContent = D.title || 'Task Ripper';
     $$('#tabs button').forEach(function (b) { b.classList.toggle('on', b.dataset.tab === tab); });
     var sealed = D.packs.filter(isUnopened).length;
