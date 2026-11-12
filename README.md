@@ -33,4 +33,5 @@ cd tests
 npm install            # jsdom (+ puppeteer-core for the optional browser smoke test)
 node --test            # engine + jsdom app tests, offline (uses fixtures/tcgdex-sv08.json)
 node browser-smoke.js  # optional: real Chrome, live TCGdex, saves screenshots to /tmp/shots
+node touch-smoke.js    # optional: real Chrome with touch, normal + Reduce Motion: one card per swipe, zoom, backpack filter
 ```

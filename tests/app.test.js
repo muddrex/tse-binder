@@ -77,7 +77,18 @@ test('confirm task -> choose set -> sealed pack in backpack -> rip (reduce motio
   assert.strictEqual(D.packs[0].status, 'opened'); assert.strictEqual(D.packs[0].cards.length, 10);
   assert.ok(D.packs[0].cards.every(c => c.setId === 'sv08'));
   assert.ok(Object.keys(D.collection).length >= 1);
-  const recap = d.querySelector('#toBinder'); assert.ok(recap, 'reduce motion goes straight to recap');
+  // Reduce Motion still rips one card at a time (no dumping all 10 at once)
+  assert.ok(!d.querySelector('#toBinder'), 'reduce motion must not jump to the recap');
+  const stage0 = d.querySelector('#stage');
+  const tapRM = () => { for (const ty of ['pointerdown', 'pointerup']) { const e = new w.Event(ty, { bubbles: true }); e.clientX = 100; e.clientY = 100; e.pointerId = 1; stage0.dispatchEvent(e); } };
+  assert.ok(d.querySelector('#tear')); tapRM(); await tick(150);
+  assert.ok(d.querySelector('#fl'), 'tap opens to the face-down stack'); tapRM(); await tick(150);
+  for (let i = 0; i < 10; i++) {
+    assert.ok(d.querySelector('#top'), 'one card showing: ' + (i + 1));
+    assert.strictEqual(d.querySelector('#ripCount').textContent, (i + 1) + ' / 10');
+    click(w, d.querySelector('.nextBtn')); await tick(150);
+  }
+  const recap = d.querySelector('#toBinder'); assert.ok(recap, 'recap only after the last card');
   click(w, recap);
   D = JSON.parse(ls.getItem('task-ripper-preview'));
   assert.strictEqual(D.packs[0].ripSeen, true);
@@ -113,14 +124,107 @@ test('swipe rip: tear, flip, swipe through all cards to recap', async () => {
     ev('pointerdown', 10); ev('pointermove', 10 + dx / 2); ev('pointermove', 10 + dx); ev('pointerup', 10 + dx);
   };
   assert.ok(d.querySelector('#tear'), 'sealed wrapper with tear strip');
-  swipe(300); await tick(50);
+  swipe(300); await tick(150);
   assert.ok(d.querySelector('#fl'), 'face-down stack after tear');
-  swipe(300); await tick(50);
-  for (let i = 0; i < 10; i++) { assert.ok(d.querySelector('#top'), 'card ' + (i + 1)); swipe(300); await tick(30); }
+  swipe(300); await tick(150);
+  for (let i = 0; i < 10; i++) { assert.ok(d.querySelector('#top'), 'card ' + (i + 1)); swipe(300); await tick(150); }
   assert.ok(d.querySelector('#toBinder'), 'recap after last card');
   const D = JSON.parse(ls.getItem('task-ripper-preview'));
   assert.strictEqual(D.packs[0].cards.length, 10);
   assert.ok(w.TRE.RANK[D.packs[0].cards[9].tier] >= w.TRE.RANK.DR);
+});
+
+function ptr(w, stage) {
+  const ev = (type, x, y = 300) => { const e = new w.Event(type, { bubbles: true }); e.clientX = x; e.clientY = y; e.pointerId = 1; stage.dispatchEvent(e); };
+  return {
+    tap: () => { ev('pointerdown', 50); ev('pointerup', 51); },
+    swipe: (dx) => { ev('pointerdown', 10); ev('pointermove', 10 + dx / 2); ev('pointermove', 10 + dx); ev('pointerup', 10 + dx); },
+    cancel: (dx) => { ev('pointerdown', 10); ev('pointermove', 10 + dx); ev('pointercancel', 0, 0); }
+  };
+}
+async function ripReady() {
+  const b = boot();
+  b.w.TRE.earnPack(b.w.__TR.D, b.w.__TR.D.tasks[0], { id: 'sv08', name: 'Surging Sparks' }, Date.now());
+  b.w.__TR.openPack(b.w.__TR.D.packs[0].id);
+  await tick(200);
+  const stage = b.d.querySelector('#stage'); Object.defineProperty(stage, 'clientWidth', { value: 400 });
+  return Object.assign(b, { stage, P: ptr(b.w, stage) });
+}
+
+test('taps never skip ahead: one card at a time, even with iPad Reduce Motion on', async () => {
+  for (const rmMode of [false, true]) {
+    const { w, d, P } = await ripReady.call(null);
+    if (rmMode) { w.matchMedia = () => ({ matches: true }); }
+    // (Reduce Motion is read when the pack opens; re-open with it on)
+    if (rmMode) { d.querySelector('.rip').remove(); w.__TR.openPack(w.__TR.D.packs[0].id); await tick(200); }
+    const stage = d.querySelector('#stage'); Object.defineProperty(stage, 'clientWidth', { value: 400 });
+    const p = ptr(w, stage);
+    assert.ok(d.querySelector('#tear'), 'opening a pack shows the sealed wrapper, not the recap');
+    assert.ok(!d.querySelector('#toBinder'));
+    if (!rmMode) {
+      p.tap(); p.tap(); p.tap();
+      assert.ok(d.querySelector('#tear'), 'taps do not tear the pack');
+      p.cancel(400); assert.ok(d.querySelector('#tear'), 'a cancelled touch snaps back');
+      p.swipe(300); await tick(150);
+      assert.ok(d.querySelector('#fl')); p.tap(); assert.ok(d.querySelector('#fl'), 'tap does not flip');
+      p.swipe(300); await tick(150);
+      assert.ok(d.querySelector('#top')); assert.strictEqual(d.querySelector('#ripCount').textContent, '1 / 10');
+      p.cancel(400); await tick(150); assert.strictEqual(d.querySelector('#ripCount').textContent, '1 / 10');
+      p.swipe(300); await tick(150); assert.strictEqual(d.querySelector('#ripCount').textContent, '2 / 10', 'one swipe = one card');
+    } else {
+      p.tap(); await tick(150); assert.ok(d.querySelector('#fl'), 'reduce motion: tap opens'); p.tap(); await tick(150);
+      assert.strictEqual(d.querySelector('#ripCount').textContent, '1 / 10');
+      p.swipe(300); await tick(150); assert.strictEqual(d.querySelector('#ripCount').textContent, '2 / 10');
+      click(w, d.querySelector('.nextBtn')); await tick(150); assert.strictEqual(d.querySelector('#ripCount').textContent, '3 / 10');
+    }
+    assert.ok(!d.querySelector('#toBinder'), 'still mid-rip');
+  }
+});
+
+test('zoom: tap the face-up card during the rip, and any card on the recap; easy to close', async () => {
+  const { w, d, P } = await ripReady();
+  P.swipe(300); await tick(150); P.swipe(300); await tick(150);
+  P.tap(); // tap the face-up card
+  let z = d.querySelector('.zoom'); assert.ok(z, 'zoom opens on tap during rip');
+  assert.match(z.querySelector('img').getAttribute('src'), /\/high\.webp$/);
+  assert.strictEqual(d.querySelector('#ripCount').textContent, '1 / 10', 'zoom tap does not advance');
+  await tick(400);
+  click(w, z.querySelector('.zoomClose')); assert.ok(!d.querySelector('.zoom'), 'big X closes');
+  click(w, d.querySelector('#ripZoom')); assert.ok(d.querySelector('.zoom'), 'zoom button'); await tick(400);
+  click(w, d.querySelector('.zoom')); assert.ok(!d.querySelector('.zoom'), 'tapping the backdrop closes');
+  click(w, d.querySelector('#ripSkip'));
+  const btns = d.querySelectorAll('.recap [data-zi]'); assert.strictEqual(btns.length, 10);
+  click(w, btns[9]); z = d.querySelector('.zoom'); assert.ok(z);
+  const last = w.__TR.D.packs[0].cards[9];
+  assert.match(z.textContent, new RegExp(last.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  assert.match(z.textContent, /10 \/ 10/);
+  await tick(400);
+  click(w, z.querySelector('[data-zprev]')); assert.match(d.querySelector('.zoom').textContent, /9 \/ 10/);
+  d.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape' })); assert.ok(!d.querySelector('.zoom'), 'Escape closes');
+  assert.ok(d.querySelector('#toBinder'), 'recap still there after closing zoom');
+  // opened pack in the backpack: tap shows cards, tap card zooms
+  click(w, d.querySelector('#toBinder'));
+  click(w, d.querySelector('[data-act=packcards]'));
+  click(w, d.querySelector('.modal [data-zi="0"]')); assert.ok(d.querySelector('.zoom'), 'zoom from backpack opened pack');
+});
+
+test('backpack: newest packs first by default; Unopened filter hides opened packs', async () => {
+  const { w, d } = boot();
+  const D = w.__TR.D, t = D.tasks[0], T = Date.now();
+  const a = w.TRE.earnPack(D, t, { id: 'sv08', name: 'Surging Sparks' }, T - 3 * 864e5);
+  const b = w.TRE.earnPack(D, t, { id: 'sv10', name: 'Destined Rivals' }, T - 2 * 864e5);
+  const c = w.TRE.earnPack(D, t, { id: 'sv08', name: 'Surging Sparks' }, T - 1 * 864e5);
+  b.status = 'opened'; b.ripSeen = true; b.openedAt = T; b.cards = [];
+  click(w, d.querySelector('[data-tab=backpack]'));
+  const ids = () => [...d.querySelectorAll('#bpList [data-id]')].map(x => x.dataset.id);
+  assert.deepStrictEqual(ids(), [c.id, b.id, a.id], 'newest earned first');
+  click(w, d.querySelector('[data-bpshow=unopened]'));
+  assert.deepStrictEqual(ids(), [c.id, a.id], 'opened pack hidden');
+  assert.ok(d.querySelectorAll('#bpList [data-act=open]').length === 2);
+  click(w, d.querySelector('[data-bpshow=opened]')); assert.deepStrictEqual(ids(), [b.id]);
+  click(w, d.querySelector('[data-bpshow=all]'));
+  const sel = d.querySelector('[data-bp=sort]'); sel.value = 'oldest'; sel.dispatchEvent(new w.Event('change', { bubbles: true }));
+  assert.deepStrictEqual(ids(), [a.id, b.id, c.id]);
 });
 
 test('skip button never blocks cards being added', async () => {

@@ -20,6 +20,8 @@
   };
 
   var D = load(), C = loadCache(), tab = 'tasks', adminOK = false, adminTab = 'tasks', bf = { set: 'all', fav: false, tier: 'all', sort: 'number', q: '', missing: false };
+  // Backpack view options (not saved): default shows every pack, newest earned first.
+  var bp = { show: 'all', sort: 'newest' };
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (m) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]; }); }
@@ -170,19 +172,60 @@
     sets.forEach(function (s) { if (!C.pools[s.id]) loadPool(s.id).then(function () { if (m.isConnected) draw(m); }, function () {}); });
   }
 
-  function viewBackpack() {
-    var sealed = D.packs.filter(function (p) { return p.status === 'sealed'; }).sort(function (a, b) { return a.at - b.at; });
-    var unfinished = D.packs.filter(function (p) { return p.status === 'opened' && p.ripSeen === false; });
-    var opened = D.packs.filter(function (p) { return p.status === 'opened'; }).sort(function (a, b) { return (b.openedAt || 0) - (a.openedAt || 0); });
-    return '<div class="card"><h2>Backpack</h2>' + (sealed.length || unfinished.length ? '<p class="muted">Tap a pack to rip it.</p><div class="packs">' +
-      unfinished.concat(sealed).map(function (p) {
-        return '<button class="packTile" data-act="open" data-id="' + esc(p.id) + '">' + packHTML(p.setId, p.premium) + '<b>' + esc(p.setName) + '</b>' + (p.premium ? '<span class="badge b-prem">Premium</span>' : '<span class="badge">Regular</span>') + (p.status === 'opened' ? '<span class="badge b-warn">Finish ripping</span>' : '') + '<span class="small muted">' + esc(p.taskName) + '<br>' + esc(when(p.at)) + '</span></button>';
-      }).join('') + '</div>' : '<p class="muted">No sealed packs. Finish a task to earn one!</p>') + '</div>' +
-      '<div class="card"><h2>Opened packs</h2>' + (opened.length ? opened.slice(0, 40).map(packHistoryRow).join('') : '<p class="muted">None yet.</p>') + '</div>';
+  function isUnopened(p) { return p.status === 'sealed' || (p.status === 'opened' && p.ripSeen === false); }
+  function backpackPacks() {
+    var list = D.packs.filter(function (p) { return bp.show === 'unopened' ? isUnopened(p) : bp.show === 'opened' ? !isUnopened(p) : true; });
+    return list.sort(function (a, b) { return bp.sort === 'oldest' ? (a.at || 0) - (b.at || 0) : (b.at || 0) - (a.at || 0); });
   }
-  function packHistoryRow(p) {
-    return '<details style="margin:8px 0"><summary style="min-height:44px;cursor:pointer"><b>' + esc(p.setName) + '</b> ' + (p.premium ? '<span class="badge b-prem">Premium</span>' : '<span class="badge">Regular</span>') + ' <span class="muted small">from "' + esc(p.taskName) + '", earned ' + esc(when(p.at)) + (p.openedAt ? ', opened ' + esc(when(p.openedAt)) : '') + '</span>' + (p.short ? ' <span class="badge b-warn">Short pack</span>' : '') + '</summary>' +
-      '<div class="recap" style="padding:8px 0">' + (p.cards || []).map(function (c) { return slotHTML(c, null, true); }).join('') + '</div></details>';
+  function viewBackpack() {
+    var nUn = D.packs.filter(isUnopened).length, nOp = D.packs.length - nUn, list = backpackPacks();
+    var chip = function (k, label) { return '<button class="btn chip' + (bp.show === k ? ' on' : '') + '" data-bpshow="' + k + '">' + label + '</button>'; };
+    return '<div class="card"><h2>Backpack</h2>' +
+      '<div class="row spread"><div class="row">' + chip('all', 'All (' + D.packs.length + ')') + chip('unopened', 'Unopened (' + nUn + ')') + chip('opened', 'Opened (' + nOp + ')') + '</div>' +
+      '<select data-bp="sort" aria-label="Sort packs"><option value="newest"' + (bp.sort === 'newest' ? ' selected' : '') + '>Newest first</option><option value="oldest"' + (bp.sort === 'oldest' ? ' selected' : '') + '>Oldest first</option></select></div>' +
+      (list.length ? '<p class="muted">Tap a sealed pack to rip it. Tap an opened pack to see its cards.</p><div class="packs" id="bpList">' + list.map(packTile).join('') + '</div>'
+        : '<p class="muted">' + (bp.show === 'unopened' ? 'No unopened packs. Finish a task to earn one!' : bp.show === 'opened' ? 'No opened packs yet.' : 'No packs yet. Finish a task to earn one!') + '</p>') + '</div>';
+  }
+  function packTile(p) {
+    var un = isUnopened(p), status = p.status === 'sealed' ? '<span class="badge b-new">Sealed</span>' : un ? '<span class="badge b-warn">Finish ripping</span>' : '<span class="badge">Opened</span>';
+    return '<button class="packTile' + (un ? '' : ' opened') + '" data-act="' + (un ? 'open' : 'packcards') + '" data-id="' + esc(p.id) + '">' + packHTML(p.setId, p.premium) + '<b>' + esc(p.setName) + '</b>' + (p.premium ? '<span class="badge b-prem">Premium</span>' : '<span class="badge">Regular</span>') + status + (p.short ? '<span class="badge b-warn">Short pack</span>' : '') +
+      '<span class="small muted">' + esc(p.taskName) + '<br>Earned ' + esc(when(p.at)) + (p.openedAt && !un ? '<br>Opened ' + esc(when(p.openedAt)) : '') + '</span></button>';
+  }
+  function zoomGrid(p) {
+    return '<div class="recap">' + (p.cards || []).map(function (c, i) { return '<button type="button" class="zoomBtn' + (c.nice ? ' niceGlow' : '') + '" data-zoompack="' + esc(p.id) + '" data-zi="' + i + '" aria-label="Zoom in on ' + esc(c.name) + '">' + slotHTML(c, null, true) + '</button>'; }).join('') + '</div>';
+  }
+  function packCards(id) {
+    var p = D.packs.find(function (x) { return x.id === id; }); if (!p) return;
+    modal('<div class="row spread"><h2 style="margin:0">' + esc(p.setName) + (p.premium ? ' <span class="badge b-prem">Premium</span>' : '') + '</h2><button class="btn" data-close>Close</button></div><p class="muted small">From "' + esc(p.taskName) + '", earned ' + esc(when(p.at)) + (p.openedAt ? ', opened ' + esc(when(p.openedAt)) : '') + '. Tap a card to zoom in.</p>' + zoomGrid(p));
+  }
+
+  /* ---------- card zoom (tap a card to see it big) ---------- */
+  function zoomCard(cards, i) {
+    var old = $('.zoom'); if (old) old.remove();
+    var z = document.createElement('div'); z.className = 'zoom'; z.setAttribute('role', 'dialog'); z.setAttribute('aria-label', 'Card close-up');
+    document.body.appendChild(z); var openedAt = Date.now();
+    function close() { z.remove(); document.removeEventListener('keydown', key); }
+    function key(e) { if (e.key === 'Escape') close(); else if (e.key === 'ArrowRight') show(i + 1); else if (e.key === 'ArrowLeft') show(i - 1); }
+    document.addEventListener('keydown', key);
+    function show(k) {
+      if (k < 0 || k >= cards.length) return; i = k; var c = cards[i], e = D.collection[c.id], pr = e ? bestPrice(e, c.id) : null, tier = c.tier || E.tierOf(c.rarity);
+      z.innerHTML = '<button type="button" class="zoomClose" data-zclose aria-label="Close">✕</button>' +
+        '<div class="zoomPic' + (c.variant === 'reverse' ? ' rev' : '') + '">' + (c.image ? '<img alt="' + esc(c.name) + '" src="' + esc(img(c, 'high')) + '">' : '<div class="muted" style="padding:40px">No picture</div>') + '</div>' +
+        '<div class="zoomInfo"><b style="font-size:22px">' + esc(c.name) + '</b><div>' + esc(setMeta(c.setId).name) + ' #' + esc(c.localId) + ' · ' + esc(E.TIER_LABEL[tier] || c.rarity || '') + (c.variant === 'reverse' ? ' · Reverse holo' : '') + '</div>' +
+        '<div class="small muted">' + (c.isNew ? 'NEW for your binder. ' : '') + (e ? 'You have ' + e.count + ' (max 5).' : '') + (pr ? ' About ' + esc(E.fmtMoney(pr)) + '.' : '') + '</div></div>' +
+        '<div class="row" style="justify-content:center">' + (cards.length > 1 ? '<button type="button" class="btn" data-zprev' + (i ? '' : ' disabled') + '>‹ Prev</button><span class="muted">' + (i + 1) + ' / ' + cards.length + '</span><button type="button" class="btn" data-znext' + (i < cards.length - 1 ? '' : ' disabled') + '>Next ›</button>' : '') + '<button type="button" class="btn primary" data-zclose style="min-width:140px">Close</button></div>';
+    }
+    z.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      if (Date.now() - openedAt < 350) return; // ignore the tap that opened the zoom (iPad can deliver it late)
+      if (ev.target === z || ev.target.closest('[data-zclose]')) close();
+      else if (ev.target.closest('[data-zprev]')) show(i - 1);
+      else if (ev.target.closest('[data-znext]')) show(i + 1);
+    });
+    // keep taps inside the zoom from reaching the rip stage underneath
+    ['pointerdown', 'pointermove', 'pointerup'].forEach(function (t) { z.addEventListener(t, function (ev) { ev.stopPropagation(); }); });
+    show(i);
+    return z;
   }
 
   function slotHTML(c, entry, small) {
@@ -361,11 +404,14 @@
   function openPack(id) {
     var p = D.packs.find(function (x) { return x.id === id; }); if (!p) return;
     var ov = document.createElement('div'); ov.className = 'rip';
-    ov.innerHTML = '<div class="bar2"><div><b>' + esc(p.setName) + '</b> ' + (p.premium ? '<span class="badge b-prem">Premium</span>' : '') + '<div class="small muted">for "' + esc(p.taskName) + '"</div></div><div class="counter" id="ripCount"></div><div class="row"><button class="btn" id="ripSkip">Skip to cards</button><button class="btn ghost" id="ripClose" aria-label="Close">✕</button></div></div><div class="stage" id="stage"></div>';
+    ov.innerHTML = '<div class="bar2"><div><b>' + esc(p.setName) + '</b> ' + (p.premium ? '<span class="badge b-prem">Premium</span>' : '') + '<div class="small muted">for "' + esc(p.taskName) + '"</div></div><div class="counter" id="ripCount"></div><div class="row"><button class="btn hidden" id="ripZoom">🔍 Zoom</button><button class="btn" id="ripSkip">Skip to cards</button><button class="btn ghost" id="ripClose" aria-label="Close">✕</button></div></div><div class="stage" id="stage"></div>';
     document.body.appendChild(ov);
     var stage = $('#stage', ov), state = { i: 0 };
     $('#ripClose', ov).onclick = function () { ov.remove(); render(); };
     $('#ripSkip', ov).onclick = function () { if (p.status === 'opened') recap(); };
+    $('#ripZoom', ov).onclick = function () { if (p.cards && p.cards[state.i]) zoomCard(p.cards, state.i); };
+    // Reduce Motion (iPad setting or Admin toggle) keeps the one-card-at-a-time rip, just without the motion.
+    var rm = reduceMotion();
     stage.innerHTML = '<div style="text-align:center">' + packHTML(p.setId, p.premium, 'bigpack') + '<p class="muted">Getting cards ready…</p></div>';
     var ready = p.status === 'opened' ? Promise.resolve() : loadPool(p.setId).then(function (pool) {
       var res = E.generatePack({ pool: pool, collection: D.collection, premium: p.premium });
@@ -377,7 +423,7 @@
       return preload(p.cards.map(function (c) { return img(c, 'high'); }), 8000);
     }).then(function () {
       if (!ov.isConnected) return;
-      if (reduceMotion()) recap(); else sealedStage();
+      sealedStage(); // always the one-by-one rip; only "Skip to cards" jumps to the recap
     }, function (err) {
       stage.innerHTML = '<div class="card" style="max-width:420px;text-align:center"><h2>Could not open yet</h2><p>' + esc(err.message || err) + '</p><p class="muted">The card list for a set needs the internet the first time. Your pack is still sealed in the backpack.</p><button class="btn primary" id="ripBack">Back</button></div>';
       $('#ripBack', ov).onclick = function () { ov.remove(); render(); };
@@ -385,63 +431,80 @@
 
     function hint(t) { var h = $('.hint', stage); if (!h) { h = document.createElement('div'); h.className = 'hint'; stage.appendChild(h); } h.textContent = t; }
     // One set of pointer listeners on the stage; each rip step swaps in its own move/end handlers.
-    var cur = null, sx = 0, sy = 0, hist = [], active = false;
-    function drag(el, onMove, onEnd) { cur = { move: onMove, end: onEnd }; }
-    stage.addEventListener('pointerdown', function (e) { if (!cur) return; active = true; sx = e.clientX; sy = e.clientY; hist = [{ x: e.clientX, y: e.clientY, t: e.timeStamp || Date.now() }]; if (stage.setPointerCapture && e.pointerId != null) try { stage.setPointerCapture(e.pointerId); } catch (x) {} });
-    stage.addEventListener('pointermove', function (e) { if (!active || !cur) return; var t = e.timeStamp || Date.now(); hist.push({ x: e.clientX, y: e.clientY, t: t }); while (hist.length > 2 && t - hist[0].t > 90) hist.shift(); cur.move(e.clientX - sx, e.clientY - sy); });
-    function up(e) { if (!active || !cur) return; active = false; var a = hist[0], b = hist[hist.length - 1], dt = Math.max(1, b.t - a.t); cur.end(e.clientX - sx, e.clientY - sy, (b.x - a.x) / dt, (b.y - a.y) / dt); }
-    stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
-    function anim(el, frames, ms) { if (el.animate) { var a = el.animate(frames, { duration: ms, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' }); return a.finished || new Promise(function (r) { a.onfinish = r; }); } el.style.transform = frames[frames.length - 1].transform || ''; return Promise.resolve(); }
+    var cur = null, sx = 0, sy = 0, st = 0, hist = [], active = false, pid = null;
+    // onTap runs for a short touch that barely moves; it never counts as a finished swipe.
+    function drag(el, onMove, onEnd, onTap) { cur = { move: rm ? function () {} : onMove, end: onEnd, tap: onTap || null }; }
+    stage.addEventListener('pointerdown', function (e) {
+      if (!cur || active) return; if (e.button != null && e.button > 0) return;
+      active = true; pid = e.pointerId; sx = e.clientX; sy = e.clientY; st = e.timeStamp || Date.now(); hist = [{ x: e.clientX, y: e.clientY, t: st }];
+      if (stage.setPointerCapture && e.pointerId != null) try { stage.setPointerCapture(e.pointerId); } catch (x) {}
+    });
+    stage.addEventListener('pointermove', function (e) { if (!active || !cur || (pid != null && e.pointerId !== pid)) return; var t = e.timeStamp || Date.now(); hist.push({ x: e.clientX, y: e.clientY, t: t }); while (hist.length > 2 && t - hist[0].t > 90) hist.shift(); cur.move(e.clientX - sx, e.clientY - sy); });
+    function up(e) {
+      if (!active || !cur || (pid != null && e.pointerId !== pid)) return; active = false; pid = null;
+      var a = hist[0], b = hist[hist.length - 1], dt = Math.max(1, b.t - a.t);
+      var dx = e.clientX - sx, dy = e.clientY - sy, dur = (e.timeStamp || Date.now()) - st;
+      if (Math.sqrt(dx * dx + dy * dy) < 12 && dur < 600) { cur.end(0, 0, 0, 0); if (cur.tap) cur.tap(); return; }
+      cur.end(dx, dy, (b.x - a.x) / dt, (b.y - a.y) / dt);
+    }
+    stage.addEventListener('pointerup', up);
+    // A cancelled touch (iPad system gesture, scroll takeover) snaps back; it never completes a step.
+    stage.addEventListener('pointercancel', function () { if (!active || !cur) return; active = false; pid = null; cur.end(0, 0, 0, 0); });
+    function anim(el, frames, ms) { if (rm) ms = 0; if (el.animate && ms > 0) { var a = el.animate(frames, { duration: ms, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' }); return a.finished || new Promise(function (r) { a.onfinish = r; }); } var last = frames[frames.length - 1]; el.style.transform = last.transform || ''; if (last.opacity != null) el.style.opacity = last.opacity; return new Promise(function (r) { setTimeout(r, 40); }); } // let the touch finish before the cards are swapped
+    // Reduce Motion: a tap or any short swipe moves on one step.
+    function rmGo(dx, dy) { return rm && Math.sqrt(dx * dx + dy * dy) > 30; }
     function W() { return stage.clientWidth || 360; }
 
     function sealedStage() {
       stage.innerHTML = '<div class="deck" style="width:auto;aspect-ratio:auto"><div style="position:relative" id="pk">' + packHTML(p.setId, p.premium, 'bigpack') + '<div class="tear" id="tear">' + packHTML(p.setId, p.premium) + '</div><div class="tearline" id="tl" style="width:0"></div></div></div>';
       var tear = $('#tear', stage), tl = $('#tl', stage), pk = $('#pk', stage), done = false;
       // Show only the top strip of the duplicate wrapper inside the tear piece.
-      hint('Swipe across the top to tear it open');
+      hint(rm ? 'Tap or swipe to open the pack' : 'Swipe across the top to tear it open');
       drag(stage, function (dx) {
         if (done) return; var p2 = Math.min(1, Math.abs(dx) / (W() * 0.55));
         tl.style.width = (p2 * 100) + '%';
         tear.style.transform = 'rotate(' + (-p2 * 10 * Math.sign(dx || 1)) + 'deg) translateY(' + (-p2 * 14) + 'px)';
       }, function (dx, dy, vx) {
         if (done) return; var p2 = Math.abs(dx) / (W() * 0.55);
-        if (p2 >= 1 || (p2 > 0.3 && Math.abs(vx) > 0.6)) {
+        if (p2 >= 1 || (p2 > 0.3 && Math.abs(vx) > 0.6) || rmGo(dx, dy)) {
           done = true; var ms = Math.max(200, Math.min(900, 300 / Math.max(Math.abs(vx), 0.3)));
           anim(tear, [{ transform: tear.style.transform || 'none' }, { transform: 'translate(' + (Math.sign(dx || 1) * W()) + 'px,-200px) rotate(' + (-40 * Math.sign(dx || 1)) + 'deg)' }], ms)
             .then(function () { return anim(pk, [{ transform: 'translateY(0)', opacity: 1 }, { transform: 'translateY(60%)', opacity: 0 }], 450); })
             .then(stackStage);
         } else { tear.style.transform = ''; tl.style.width = '0'; }
-      });
+      }, function () { if (rm && !done) { done = true; setTimeout(stackStage, 40); } else if (!done) hint('Swipe across the pack to tear it open'); });
     }
     function stackStage() {
       var c0 = p.cards[0];
       stage.innerHTML = '<div class="deck" id="dk"><div class="stackShadow"></div><div class="flipper" id="fl"><div class="face cardback"></div><div class="face front">' + tcgHTML(c0) + '</div></div></div>';
       var fl = $('#fl', stage), dk = $('#dk', stage), done = false;
       anim(dk, [{ transform: 'translateY(40%)', opacity: 0 }, { transform: 'translateY(0)', opacity: 1 }], 450);
-      hint('All face down. Swipe to flip the whole stack over');
+      hint(rm ? 'All face down. Tap or swipe to flip the stack' : 'All face down. Swipe to flip the whole stack over');
       drag(stage, function (dx) { if (done) return; var a = Math.max(0, Math.min(180, Math.abs(dx) / W() * 300)); fl.style.transform = 'rotateY(' + (a * Math.sign(dx || 1)) + 'deg)'; }, function (dx, dy, vx) {
         if (done) return; var a = Math.abs(dx) / W() * 300, s = Math.sign(dx || 1);
-        if (a > 90 || Math.abs(vx) > 0.7) {
+        if (a > 90 || Math.abs(vx) > 0.7 || rmGo(dx, dy)) {
           done = true; var ms = Math.max(180, Math.min(1000, 260 / Math.max(Math.abs(vx), 0.25)));
           anim(fl, [{ transform: fl.style.transform || 'rotateY(0)' }, { transform: 'rotateY(' + (180 * s) + 'deg)' }], ms).then(function () { state.i = 0; revealStage(); });
         } else fl.style.transform = '';
-      });
+      }, function () { if (rm && !done) { done = true; setTimeout(function () { state.i = 0; revealStage(); }, 40); } else if (!done) hint('Swipe sideways to flip the stack over'); });
     }
     function tcgHTML(c) { if (!c) return ''; return '<div class="tcg ' + (c.variant === 'reverse' ? 'rev ' : '') + (c.nice ? 'nice' : '') + '"><img alt="' + esc(c.name) + '" src="' + esc(img(c, 'high')) + '"></div>'; }
     function revealStage() {
       var i = state.i, n = p.cards.length, cur = p.cards[i], nxt = p.cards[i + 1];
       if (i >= n) return recap();
-      $('#ripCount', ov).textContent = (i + 1) + ' / ' + n;
+      $('#ripCount', ov).textContent = (i + 1) + ' / ' + n; $('#ripZoom', ov).classList.remove('hidden');
       stage.innerHTML = '<div class="deck"><div class="stackShadow"></div>' + (nxt ? '<div class="c" id="under" style="transform:scale(.94);filter:brightness(.45)">' + tcgHTML(nxt) + '</div>' : '') + '<div class="c" id="top">' + tcgHTML(cur) + '</div><div class="cardLabel">' + esc(E.TIER_LABEL[cur.tier]) + (cur.variant === 'reverse' ? ' · Reverse holo' : '') + (cur.nice ? ' ★' : '') + (cur.isNew ? ' · NEW' : '') + '</div></div>';
       var top = $('#top', stage), under = $('#under', stage), done = false;
-      hint(i === n - 1 ? 'Last card! Swipe it away to see all your cards' : (nxt && nxt.nice ? 'Something shiny is underneath… swipe slowly' : 'Swipe the card away'));
+      hint(rm ? (i === n - 1 ? 'Last card! Swipe or tap Next to see all your cards' : 'Swipe or tap Next for the next card') : (i === n - 1 ? 'Last card! Swipe it away to see all your cards' : (nxt && nxt.nice ? 'Something shiny is underneath… swipe slowly' : 'Swipe the card away · tap it to zoom')));
+      if (rm) { var nb = document.createElement('button'); nb.className = 'btn primary nextBtn'; nb.textContent = i === n - 1 ? 'See all cards ›' : 'Next card ›'; var nGo = function (ev) { ev.stopPropagation(); if (!done) { done = true; setTimeout(function () { state.i++; revealStage(); }, 40); } };
+        nb.addEventListener('pointerdown', function (ev) { ev.stopPropagation(); }); nb.addEventListener('pointerup', nGo); nb.addEventListener('click', nGo); stage.appendChild(nb); }
       drag(stage, function (dx, dy) {
         if (done) return; var dist = Math.sqrt(dx * dx + dy * dy), pr = Math.min(1, dist / (W() * 0.6));
         top.style.transform = 'translate(' + dx + 'px,' + dy + 'px) rotate(' + (dx / 18) + 'deg)';
         if (under) { under.style.transform = 'scale(' + (0.94 + 0.06 * pr) + ')'; under.style.filter = 'brightness(' + (0.45 + 0.55 * pr) + ')'; }
       }, function (dx, dy, vx, vy) {
         if (done) return; var dist = Math.sqrt(dx * dx + dy * dy), v = Math.sqrt(vx * vx + vy * vy);
-        if (dist > W() * 0.28 || (v > 0.5 && dist > 20)) {
+        if (dist > W() * 0.28 || (v > 0.5 && dist > 20) || rmGo(dx, dy)) {
           done = true; var dirx = dist ? dx / dist : 1, diry = dist ? dy / dist : 0, far = W() * 1.3;
           var ms = Math.max(140, Math.min(1100, (far - dist) / Math.max(v, 0.35)));
           if (under) anim(under, [{ transform: under.style.transform || 'scale(.94)', filter: under.style.filter || 'brightness(.45)' }, { transform: 'scale(1)', filter: 'brightness(1)' }], ms);
@@ -449,26 +512,29 @@
         } else {
           top.style.transform = ''; if (under) { under.style.transform = 'scale(.94)'; under.style.filter = 'brightness(.45)'; }
         }
-      });
+      }, function () { if (!done) zoomCard(p.cards, i); });
     }
     function recap() {
-      $('#ripCount', ov).textContent = ''; $('#ripSkip', ov).classList.add('hidden');
+      $('#ripCount', ov).textContent = ''; $('#ripSkip', ov).classList.add('hidden'); $('#ripZoom', ov).classList.add('hidden');
       stage.style.touchAction = 'auto'; stage.style.display = 'block'; stage.style.placeItems = 'normal'; stage.style.overflow = 'auto';
       cur = null; active = false;
       var newCount = p.cards.filter(function (c) { return c.isNew; }).length;
-      stage.innerHTML = '<div style="padding:0 16px"><h2>Your ' + p.cards.length + ' cards</h2><p class="muted">' + newCount + ' new for your binder. Hits are at the end.</p>' + (p.warnings || []).map(function (w) { return '<p class="badge b-warn">' + esc(w) + '</p>'; }).join(' ') + '</div><div class="recap">' + p.cards.map(function (c) { return '<div style="' + (c.nice ? 'box-shadow:0 0 22px #ffd86b99;border-radius:14px' : '') + '">' + slotHTML(c, null, true) + '</div>'; }).join('') + '</div><div style="padding:16px 16px calc(20px + env(safe-area-inset-bottom))"><button class="btn primary" id="toBinder" style="width:100%;font-size:20px;min-height:60px">Add to binder</button></div>';
+      stage.innerHTML = '<div style="padding:0 16px"><h2>Your ' + p.cards.length + ' cards</h2><p class="muted">' + newCount + ' new for your binder. Hits are at the end. Tap a card to zoom in.</p>' + (p.warnings || []).map(function (w) { return '<p class="badge b-warn">' + esc(w) + '</p>'; }).join(' ') + '</div>' + zoomGrid(p) + '<div style="padding:16px 16px calc(20px + env(safe-area-inset-bottom))"><button class="btn primary" id="toBinder" style="width:100%;font-size:20px;min-height:60px">Add to binder</button></div>';
       $('#toBinder', ov).onclick = function () { p.ripSeen = true; save(); ov.remove(); tab = 'backpack'; render(); toast(p.cards.length + ' cards added to your binder'); };
     }
   }
 
   /* ---------- events ---------- */
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-act],[data-admintab]'); if (!t) return;
+    var t = e.target.closest('[data-tab],[data-act],[data-admintab],[data-zi],[data-bpshow]'); if (!t) return;
+    if (t.dataset.zi != null && t.dataset.zoompack) { var zp = D.packs.find(function (x) { return x.id === t.dataset.zoompack; }); if (zp && zp.cards) zoomCard(zp.cards, +t.dataset.zi); return; }
+    if (t.dataset.bpshow) { bp.show = t.dataset.bpshow; render(); return; }
     if (t.dataset.tab) { tab = t.dataset.tab; render(); window.scrollTo && window.scrollTo(0, 0); return; }
     if (t.dataset.admintab) { adminTab = t.dataset.admintab; render(); return; }
     var a = t.dataset.act, id = t.dataset.id;
     if (a === 'task') onTask(id);
     else if (a === 'open') openPack(id);
+    else if (a === 'packcards') packCards(id);
     else if (a === 'card') cardDetail(id);
     else if (a === 'fav') { var en = D.collection[id]; if (en) { en.favourite = !en.favourite; save(); render(); } }
     else if (a === 'pin') {
@@ -490,6 +556,7 @@
   });
   document.addEventListener('change', function (e) {
     var t = e.target;
+    if (t.dataset.bp) { bp[t.dataset.bp] = t.value; render(); return; }
     if (t.dataset.bf) { bf[t.dataset.bf] = t.type === 'checkbox' ? t.checked : t.value; if (t.dataset.bf === 'set') bf.missing = false; render(); return; }
     if (t.dataset.tname) { var x = D.tasks.find(function (k) { return k.id === t.dataset.tname; }); if (x && t.value.trim()) { x.name = t.value.trim(); D.demoDefaults = false; save(); } }
     else if (t.dataset.tprem) { var y = D.tasks.find(function (k) { return k.id === t.dataset.tprem; }); if (y) { y.premium = t.checked; save(); render(); } }
@@ -505,5 +572,5 @@
 
   if (!localStorage.getItem(K)) save();
   render();
-  window.__TR = { get D() { return D; }, get C() { return C; }, K: K, CK: CK, openPack: openPack, render: render, loadPool: loadPool, setTab: function (t) { tab = t; render(); } };
+  window.__TR = { get D() { return D; }, get C() { return C; }, K: K, CK: CK, openPack: openPack, render: render, zoomCard: zoomCard, bp: bp, loadPool: loadPool, setTab: function (t) { tab = t; render(); } };
 })();
