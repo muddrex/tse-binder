@@ -1,0 +1,1 @@
+{"name":"task-ripper-tests","private":true,"dependencies":{"jsdom":"^24.1.3","puppeteer-core":"^23.11.1"}}

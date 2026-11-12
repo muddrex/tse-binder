@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="robots" content="noindex,nofollow">
+<title>Task Ripper PREVIEW</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://api.tcgdex.net">
+<link rel="preconnect" href="https://assets.tcgdex.net">
+<style>
+:root{--bg:#0b0f24;--card:#161c3a;--ink:#f7f8ff;--muted:#aab1ca;--line:#2b3461;--gold:#f6b73c;--green:#35d087;--red:#ff6577;--violet:#7c5cff;--cw:min(72vw,330px)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:radial-gradient(circle at 15% 0,#2b1f5c 0,transparent 35%),linear-gradient(150deg,#070a17,#111838);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}
+body{padding-bottom:env(safe-area-inset-bottom)}
+.wrap{max-width:1100px;margin:auto;padding:18px 18px 110px}
+header.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+h1{margin:4px 0;font-size:clamp(28px,5vw,46px)}h2{margin:6px 0 12px}h3{margin:14px 0 8px}
+.muted{color:var(--muted)}.small{font-size:13px}
+.badge{display:inline-block;font-size:12px;font-weight:800;border-radius:99px;padding:5px 10px;background:#303a6a;vertical-align:middle}
+.b-preview{background:var(--red);color:#fff;letter-spacing:.08em}.b-prem{background:linear-gradient(90deg,#ffe08a,#f6a623);color:#2a1700}.b-new{background:var(--green);color:#04210f}.b-max{background:#a33;color:#fff}.b-warn{background:#6b4a10;color:#ffe3a3}
+.btn,input,select,textarea{font:inherit;border-radius:14px;border:1px solid var(--line);padding:12px 14px;background:#0e1430;color:#fff;min-height:48px}
+.btn{cursor:pointer;font-weight:750;touch-action:manipulation}.btn:disabled{opacity:.4}
+.primary{background:linear-gradient(90deg,var(--gold),#f27633);color:#1b1206;border:0}.danger{background:#642635}.ghost{background:transparent}
+.card{background:linear-gradient(145deg,rgba(28,36,70,.96),rgba(13,18,42,.96));border:1px solid var(--line);border-radius:22px;padding:18px;box-shadow:0 18px 50px #0006;margin-bottom:16px}
+.grid{display:grid;gap:14px}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.spread{justify-content:space-between}
+.hidden{display:none!important}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:6px;padding:8px 8px calc(8px + env(safe-area-inset-bottom));background:#080b1ccc;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);z-index:10}
+nav.tabs button{flex:1;max-width:170px;min-height:56px;border-radius:14px;border:0;background:transparent;color:var(--muted);font:inherit;font-weight:800;font-size:14px}
+nav.tabs button.on{background:#232c5c;color:#fff}
+.task{width:100%;display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:left;border:1px solid var(--line);border-radius:18px;padding:18px;margin:10px 0;background:#10172f;color:#fff;font:inherit;font-size:19px;font-weight:750;min-height:72px}
+.task.prem{border-color:#f6b73c;background:linear-gradient(135deg,#2a2210,#10172f 60%)}
+.modal{position:fixed;inset:0;background:#000c;display:grid;place-items:center;padding:18px;z-index:30;overflow:auto}
+.modalBox{max-width:560px;width:100%;background:#151c39;border:1px solid var(--line);border-radius:22px;padding:22px;max-height:92vh;overflow:auto}
+.toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:#1e7a4b;color:#fff;padding:14px 20px;border-radius:14px;font-weight:800;z-index:40;box-shadow:0 10px 30px #0008}
+/* sealed pack wrapper (drawn by the app: set logo from TCGdex + set colours, not an official photo) */
+.pack{position:relative;width:150px;aspect-ratio:.6;border-radius:8px;overflow:hidden;background:linear-gradient(160deg,var(--c1),var(--c2));box-shadow:0 14px 30px #0009,inset 0 0 0 2px #ffffff22;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;border:0;padding:0;font:inherit}
+.pack::before{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,#ffffff55 45%,transparent 60%),repeating-linear-gradient(135deg,#ffffff0d 0 6px,transparent 6px 12px);mix-blend-mode:screen;pointer-events:none}
+.pack .crimp{position:absolute;left:0;right:0;height:7%;background:repeating-linear-gradient(90deg,#ffffff55 0 3px,#00000033 3px 6px);opacity:.8}
+.pack .crimp.t{top:0}.pack .crimp.b{bottom:0}
+.pack .logo{width:82%;max-height:34%;object-fit:contain;filter:drop-shadow(0 4px 6px #0009);z-index:1}
+.pack .logoText{font-weight:900;font-size:18px;text-align:center;padding:0 8px;z-index:1;text-shadow:0 2px 6px #000}
+.pack .sub{position:absolute;bottom:10%;font-size:11px;font-weight:900;letter-spacing:.12em;background:#0007;padding:4px 8px;border-radius:6px;z-index:1}
+.pack .ribbon{position:absolute;top:10%;right:-30px;transform:rotate(35deg);background:linear-gradient(90deg,#ffe08a,#f6a623);color:#2a1700;font-size:10px;font-weight:900;padding:4px 34px;z-index:2}
+.pack .glow{position:absolute;inset:auto 0 26% 0;height:30%;background:radial-gradient(ellipse at center,#ffffff44,transparent 70%)}
+.packs{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px}
+.packTile{display:flex;flex-direction:column;align-items:center;gap:8px;background:#10172f;border:1px solid var(--line);border-radius:18px;padding:14px;color:#fff;font:inherit;text-align:center;min-height:48px}
+.packTile.disabled{opacity:.45}
+/* cards */
+.cardback{background:radial-gradient(circle at 50% 50%,#f3d35b 0 9%,#24306b 9.5% 15%,transparent 15.5%),radial-gradient(circle at 50% 50%,#3657c9,#14215e 70%);border:6px solid #e9c46a;border-radius:12px}
+.cardback::after{content:"TASK RIPPER";position:absolute;bottom:12%;left:0;right:0;text-align:center;font-weight:900;letter-spacing:.2em;font-size:12px;color:#f3d35b}
+.tcg{position:absolute;inset:0;border-radius:12px;overflow:hidden;background:#222 center/cover no-repeat}
+.tcg img{width:100%;height:100%;object-fit:cover;display:block;-webkit-user-drag:none;user-select:none;pointer-events:none}
+.tcg.rev::after,.tcg.nice::after{content:"";position:absolute;inset:0;background:linear-gradient(120deg,transparent 20%,#ffffff66 40%,#9ff 50%,#f9f 60%,transparent 80%);background-size:250% 250%;mix-blend-mode:overlay;animation:shimmer 2.4s ease-in-out infinite;pointer-events:none}
+.tcg.nice{box-shadow:0 0 40px 8px #ffd86b88}
+@keyframes shimmer{0%{background-position:100% 0}100%{background-position:-50% 0}}
+.binder{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+.slot{position:relative;background:#10172f;border:1px solid var(--line);border-radius:14px;padding:8px;color:#fff;font:inherit;text-align:left}
+.slot .pic{position:relative;aspect-ratio:.716;border-radius:9px;overflow:hidden;background:#222}
+.slot .pic img{width:100%;height:100%;object-fit:cover;display:block}
+.slot .count{position:absolute;top:6px;left:6px;background:#000b;border-radius:99px;padding:3px 8px;font-weight:900;font-size:13px}
+.slot .fav{position:absolute;top:2px;right:2px;width:48px;height:48px;border-radius:99px;border:0;background:#000a;color:#fff;font-size:24px}
+.slot .fav.on{color:#ffd23f}
+.slot .nm{font-weight:800;font-size:14px;margin-top:6px}.slot .meta{font-size:12px;color:var(--muted)}
+.slot.missing .pic{background:#0d1228;display:grid;place-items:center;color:#4b557f;font-weight:900;font-size:22px}
+.bar{height:12px;background:#080d20;border-radius:99px;overflow:hidden}.bar>i{display:block;height:100%;background:linear-gradient(90deg,#27c2e7,var(--green))}
+table{width:100%;border-collapse:collapse}td,th{padding:8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}.stat{background:#10172f;border:1px solid var(--line);border-radius:16px;padding:14px}.stat b{display:block;font-size:28px}
+.check{display:flex;align-items:center;gap:10px;min-height:48px}.check input{width:26px;height:26px;min-height:0}
+/* rip screen */
+.rip{position:fixed;inset:0;z-index:50;background:radial-gradient(circle at 50% 30%,#263070,#05060f 75%);display:flex;flex-direction:column;overflow:hidden}
+.rip .bar2{display:flex;justify-content:space-between;align-items:center;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;gap:10px}
+.stage{flex:1;position:relative;touch-action:none;user-select:none;-webkit-user-select:none;display:grid;place-items:center}
+.hint{position:absolute;bottom:calc(26px + env(safe-area-inset-bottom));left:0;right:0;text-align:center;font-weight:800;color:#dfe3ff;font-size:18px;pointer-events:none;text-shadow:0 2px 8px #000}
+.bigpack{width:min(62vw,300px)!important}
+.tear{position:absolute;left:0;right:0;top:0;height:14%;z-index:3;transform-origin:0 100%}
+.tear{overflow:hidden}.tear .pack{position:absolute;top:0;left:0;width:100%!important;aspect-ratio:.6;border-radius:8px 8px 0 0;box-shadow:none}
+#pk .bigpack{clip-path:inset(14% 0 0 0);-webkit-clip-path:inset(14% 0 0 0)}
+.tearline{position:absolute;left:0;top:14%;height:3px;background:repeating-linear-gradient(90deg,#fff 0 6px,transparent 6px 10px);z-index:4;opacity:.9}
+.deck{position:relative;width:var(--cw);aspect-ratio:.716;perspective:1400px;-webkit-perspective:1400px}
+.deck .c{position:absolute;inset:0;will-change:transform}
+.flipper{position:absolute;inset:0;transform-style:preserve-3d;-webkit-transform-style:preserve-3d}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:12px}
+.face.front{transform:rotateY(180deg)}
+.stackShadow{position:absolute;inset:0;border-radius:12px;background:#0b1030;box-shadow:0 2px 0 #c9a84a,0 4px 0 #0b1030,0 6px 0 #c9a84a,0 8px 0 #0b1030,0 10px 0 #c9a84a,0 24px 40px #000a}
+.cardLabel{position:absolute;top:calc(-44px);left:0;right:0;text-align:center;font-weight:900}
+.counter{font-weight:900;font-size:18px}
+.recap{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;padding:16px;overflow:auto}
+.recap .slot{padding:6px}
+@media (max-width:640px){.wrap{padding:12px 12px 110px}.packs{grid-template-columns:repeat(2,1fr)}.binder{grid-template-columns:repeat(2,1fr)}.pack{width:130px}}
+@media (orientation:landscape) and (max-height:820px){:root{--cw:min(42vh,300px)}.bigpack{width:min(36vh,260px)!important}}
+@media (prefers-reduced-motion:reduce){.tcg.rev::after,.tcg.nice::after{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <span class="badge b-preview">PREVIEW</span>
+      <h1 id="title">Task Ripper</h1>
+      <div class="muted">Finish a task, earn a pack, rip it, fill your binder.</div>
+    </div>
+  </header>
+  <main id="view"></main>
+  <p class="muted small" style="margin-top:30px">Personal family app, preview copy. Not affiliated with or endorsed by The Pokémon Company, Nintendo, Creatures or GAME FREAK. Card data, pictures, set logos and approximate prices come from the free <a href="https://tcgdex.dev" style="color:#9cf">TCGdex</a> API. Pack wrappers are drawn by this app.</p>
+</div>
+<nav class="tabs" id="tabs">
+  <button data-tab="tasks">Tasks</button>
+  <button data-tab="backpack">Backpack</button>
+  <button data-tab="binder">Binder</button>
+  <button data-tab="progress">Progress</button>
+  <button data-tab="admin">Admin 🔒</button>
+</nav>
+<div id="modalRoot"></div>
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
