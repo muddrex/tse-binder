@@ -25,13 +25,6 @@ body{padding-bottom:env(safe-area-inset-bottom);background:
   radial-gradient(ellipse 70% 50% at 50% 110%,rgba(139,92,255,.30),transparent 70%),
   linear-gradient(180deg,#0b0830,#070520 60%,#0c0733);background-attachment:fixed}
 a{color:var(--cyan)}
-/* decorative shop layer (fixed, behind everything, no pointer events) */
-.shopfx{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
-.shopfx .grid{position:absolute;left:-10%;right:-10%;bottom:0;height:38%;background:repeating-linear-gradient(90deg,rgba(139,92,255,.16) 0 1px,transparent 1px 70px),repeating-linear-gradient(0deg,rgba(255,63,216,.12) 0 1px,transparent 1px 46px);transform:perspective(500px) rotateX(58deg);transform-origin:50% 100%;-webkit-mask-image:linear-gradient(transparent,#000 70%);mask-image:linear-gradient(transparent,#000 70%)}
-.shopfx .tube{position:absolute;height:3px;border-radius:9px;background:var(--mag);box-shadow:0 0 10px 2px rgba(255,63,216,.7),0 0 30px 6px rgba(255,63,216,.25)}
-.shopfx .tube.t1{top:18px;right:6%;width:28%}
-.shopfx .tube.t2{top:30%;left:-2%;width:3px;height:22%;background:var(--cyan);box-shadow:0 0 10px 2px rgba(56,232,255,.7),0 0 30px 6px rgba(56,232,255,.25)}
-.shopfx .dust{position:absolute;inset:0;background:radial-gradient(1.5px 1.5px at 12% 22%,#fff9,transparent),radial-gradient(1.5px 1.5px at 78% 12%,#fffa,transparent),radial-gradient(1px 1px at 40% 60%,#fff8,transparent),radial-gradient(1.5px 1.5px at 88% 70%,#9ff9,transparent),radial-gradient(1px 1px at 22% 82%,#f9f9,transparent),radial-gradient(1px 1px at 62% 35%,#fff7,transparent),radial-gradient(1.5px 1.5px at 52% 90%,#ffd9,transparent)}
 .wrap{position:relative;z-index:1;max-width:1100px;margin:auto;padding:calc(18px + env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) 120px max(18px,env(safe-area-inset-left))}
 header.top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:10px}
 .brand{position:relative}
@@ -43,12 +36,6 @@ h1{margin:6px 0 4px;font-size:clamp(38px,7vw,64px);font-weight:900;letter-spacin
 .spark{position:absolute;color:#fff;font-size:22px;line-height:1;text-shadow:0 0 8px var(--mag),0 0 16px var(--cyan);animation:twinkle 3.2s ease-in-out infinite}
 .spark.s1{left:-14px;top:34%;font-size:16px}.spark.s2{right:-30px;top:18%;animation-delay:1.1s}.spark.s3{right:-8px;bottom:22%;font-size:13px;animation-delay:2s;color:var(--gold)}
 @keyframes twinkle{0%,100%{opacity:.25;transform:scale(.7) rotate(0)}50%{opacity:1;transform:scale(1.15) rotate(25deg)}}
-/* display shelf with invented decorative packs (atmosphere only, not real products) */
-.shelf{display:flex;gap:10px;align-items:flex-end;padding:12px 14px 0;border-radius:16px 16px 6px 6px;background:linear-gradient(180deg,rgba(139,92,255,.14),rgba(255,63,216,.06));border:1px solid rgba(190,160,255,.35);border-bottom:4px solid rgba(255,140,240,.8);box-shadow:inset 0 0 30px rgba(139,92,255,.25),0 6px 18px -6px rgba(255,63,216,.7)}
-.dpack{position:relative;width:58px;height:94px;border-radius:5px;overflow:hidden;background:var(--g);box-shadow:0 6px 14px #0009,inset 0 0 0 1px #ffffff30;display:flex;align-items:flex-end;justify-content:center;transform:rotate(var(--r,0deg));margin-bottom:-2px}
-.dpack::before{content:"";position:absolute;inset:0;background:linear-gradient(120deg,transparent 30%,#ffffff55 46%,transparent 60%),repeating-linear-gradient(90deg,#ffffff40 0 2px,transparent 2px 4px) top/100% 7px no-repeat}
-.dpack span{position:relative;font-size:8.5px;font-weight:900;letter-spacing:.06em;text-align:center;line-height:1.05;padding:0 3px 10px;color:#fff;text-shadow:0 1px 3px #000}
-.dpack.d1{--g:linear-gradient(160deg,#ffb43d,#b0237d 55%,#2d0f54);--r:-4deg}.dpack.d2{--g:linear-gradient(160deg,#8b5cff,#ff3fd8 55%,#2a0e4f)}.dpack.d3{--g:linear-gradient(160deg,#38e8ff,#5b45ff 55%,#140d46);--r:4deg}
 .muted{color:var(--muted)}.small{font-size:13px}
 h2{margin:6px 0 12px;font-size:24px;font-weight:850;text-shadow:0 0 14px rgba(255,63,216,.35)}h3{margin:14px 0 8px;font-weight:800}
 .badge{display:inline-block;font-size:12px;font-weight:850;border-radius:99px;padding:6px 11px;background:#2a2366;color:#efeaff;vertical-align:middle;border:1px solid rgba(180,160,255,.4)}
@@ -152,7 +139,7 @@ table{width:100%;border-collapse:collapse}td,th{padding:8px;border-bottom:1px so
 .packTile.opened .pack{filter:saturate(.45) brightness(.8)}
 .nextBtn{position:absolute;bottom:calc(70px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);min-width:200px;font-size:20px;min-height:60px;z-index:5}
 .disclaimer{margin-top:30px;color:#bdb6e2}
-@media (max-width:640px){.wrap{padding:calc(12px + env(safe-area-inset-top)) 12px 110px}.packs{grid-template-columns:repeat(2,1fr)}.binder{grid-template-columns:repeat(2,1fr)}.pack{width:130px}.shelf{display:none}nav.tabs button{font-size:13px}}
+@media (max-width:640px){.wrap{padding:calc(12px + env(safe-area-inset-top)) 12px 110px}.packs{grid-template-columns:repeat(2,1fr)}.binder{grid-template-columns:repeat(2,1fr)}.pack{width:130px}nav.tabs button{font-size:13px}}
 @media (orientation:landscape) and (max-height:820px){:root{--cw:min(42vh,300px)}.bigpack{width:min(36vh,260px)!important}}
 /* Reduce Motion (iPad setting or Admin toggle): no sparkles/shimmer, calmer glow */
 .rm h1,.rm .spark,.rm .tcg.rev::after,.rm .tcg.nice::after{animation:none!important}
@@ -160,45 +147,46 @@ table{width:100%;border-collapse:collapse}td,th{padding:8px;border-bottom:1px so
 .rm .card{box-shadow:0 0 0 1px rgba(255,255,255,.04),0 0 14px rgba(139,92,255,.3),0 16px 40px #0009}
 @media (prefers-reduced-motion:reduce){h1,.spark,.tcg.rev::after,.tcg.nice::after{animation:none!important}.spark{opacity:.6}}
 
-/* ===== v5: boutique display cases (decorative only: invented pack names, no real products or logos; never takes taps) ===== */
-.shopfx .cab{position:absolute;--pw:min(calc(var(--cw2) * .44),calc((100vh - 150px) / 9.4));border-radius:14px 14px 6px 6px;
-  background:linear-gradient(90deg,#1b1640,#0c0a26 8%,transparent 8% 92%,#0c0a26 92%,#1b1640) ,linear-gradient(180deg,rgba(54,30,120,.55),rgba(24,12,66,.7) 60%,rgba(40,16,90,.6));
-  border:2px solid rgba(170,140,255,.38);box-shadow:0 0 0 6px rgba(12,9,36,.85),0 0 40px rgba(139,92,255,.35),inset 0 0 40px rgba(139,92,255,.35);overflow:hidden}
-.shopfx .cab.right{--cw2:clamp(150px,25vw,320px);width:var(--cw2);right:calc(var(--cw2) * -.08);top:calc(14px + env(safe-area-inset-top));bottom:calc(92px + env(safe-area-inset-bottom));display:flex;flex-direction:column;justify-content:space-evenly;padding:22px 8% 10px}
-.shopfx .cab.right::before{content:"";position:absolute;left:6%;right:6%;top:8px;height:4px;border-radius:9px;background:#e9b8ff;box-shadow:0 0 10px 2px rgba(220,140,255,.9),0 0 40px 10px rgba(180,90,255,.35)}
-.shopfx .cab .glass,.shopfx .counter .glass{position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,rgba(255,255,255,.10) 0 6%,transparent 6% 18%,rgba(255,255,255,.07) 18% 22%,transparent 22%),linear-gradient(180deg,rgba(255,255,255,.06),transparent 30%);z-index:3}
-.shopfx .glare{position:absolute;top:-10%;bottom:-10%;left:-60%;width:40%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.14),transparent);transform:skewX(-14deg);animation:glare 9s ease-in-out infinite;z-index:3}
-@keyframes glare{0%,62%{left:-60%}100%{left:140%}}
-.shopfx .dshelf{position:relative;display:flex;justify-content:center;align-items:flex-end;gap:5%;padding-bottom:8px;z-index:1}
-.shopfx .dshelf::before{content:"";position:absolute;left:-20%;right:-20%;top:-30%;bottom:6px;background:radial-gradient(ellipse 50% 70% at 50% 0,rgba(255,180,255,.22),transparent 70%);pointer-events:none}
-.shopfx .dshelf::after{content:"";position:absolute;left:-20%;right:-20%;bottom:0;height:7px;background:linear-gradient(180deg,#f0c8ff,#9a5cff 40%,#3a1f7a);box-shadow:0 0 14px 3px rgba(220,120,255,.75),0 10px 22px rgba(139,92,255,.45)}
-.shopfx .dpack{width:var(--pw);height:calc(var(--pw) * 1.62);margin-bottom:0;flex:none}
-.shopfx .dpack span{font-size:calc(var(--pw) * .13);padding-bottom:12%}
-.dpack::after{content:"";position:absolute;left:50%;top:40%;width:70%;aspect-ratio:1;transform:translate(-50%,-50%);background:conic-gradient(from 0deg,transparent 0 10deg,rgba(255,255,255,.55) 12deg,transparent 14deg 40deg,rgba(255,255,255,.4) 44deg,transparent 46deg 80deg,rgba(255,255,255,.5) 84deg,transparent 86deg 130deg,rgba(255,255,255,.4) 134deg,transparent 136deg 180deg,rgba(255,255,255,.55) 184deg,transparent 186deg 230deg,rgba(255,255,255,.4) 234deg,transparent 236deg 280deg,rgba(255,255,255,.5) 284deg,transparent 286deg 330deg,rgba(255,255,255,.4) 334deg,transparent 336deg);border-radius:50%;-webkit-mask-image:radial-gradient(circle,#000 20%,transparent 70%);mask-image:radial-gradient(circle,#000 20%,transparent 70%);opacity:.8}
-.dpack.d4{--g:linear-gradient(160deg,#7dffb2,#1aa37a 50%,#0c2a3c);--r:3deg}.dpack.d5{--g:linear-gradient(160deg,#ffe36b,#ff8a3d 50%,#5a1230);--r:-3deg}.dpack.d6{--g:linear-gradient(160deg,#ff8ad8,#7a2bd6 55%,#1a0b40)}
-.dpack.d7{--g:linear-gradient(160deg,#9fd0ff,#3a5bff 50%,#120c44);--r:-2deg}.dpack.d8{--g:linear-gradient(160deg,#ff6b6b,#c0237a 50%,#2a0c3e);--r:2deg}.dpack.d9{--g:linear-gradient(160deg,#c6a0ff,#38e8ff 55%,#0e1a4a)}
-/* low crystal counter case, bottom-left */
-.shopfx .counter{position:absolute;--cw2:clamp(150px,24vw,300px);--pw:calc(var(--cw2) * .25);left:calc(var(--cw2) * -.06);bottom:calc(84px + env(safe-area-inset-bottom));width:var(--cw2);height:calc(var(--cw2) * .62);border-radius:10px 10px 4px 4px;
-  background:linear-gradient(180deg,rgba(80,50,170,.30),rgba(30,16,80,.55));border:2px solid rgba(170,140,255,.38);box-shadow:0 0 0 5px rgba(12,9,36,.85),0 0 34px rgba(255,63,216,.25),inset 0 0 30px rgba(139,92,255,.3);overflow:hidden;display:flex;align-items:flex-end;justify-content:center;opacity:.85}
-.shopfx .counter .dshelf{width:100%}
-.shopfx .shard{position:absolute;width:26px;height:34px;background:linear-gradient(135deg,#fff 0,#c9f6ff 25%,rgba(120,170,255,.7) 50%,rgba(255,63,216,.75) 80%,#fff);clip-path:polygon(50% 0,100% 30%,80% 100%,10% 85%,0 30%);opacity:.6}
-.shopfx .shard.h1{top:calc(30px + env(safe-area-inset-top));left:min(48vw,470px);transform:rotate(18deg)}
-.shopfx .shard.h2{top:calc(96px + env(safe-area-inset-top));left:min(56vw,540px);width:18px;height:24px;transform:rotate(-24deg)}
-/* tasks: compact list like the mockup, leaves the cases visible */
+/* tasks: compact list like the mockup, leaves the cabinet visible */
 .card.taskcard{max-width:min(600px,72vw)}
 .taskcard .task{font-size:18px;min-height:58px;padding:12px 16px 12px 26px;margin:10px 0;border-radius:16px}
 .taskcard .task::before{top:12px;bottom:12px}
 .taskcard .task.prem{min-height:62px}
 @media (min-width:641px){.disclaimer{max-width:min(600px,72vw)}}
-@media (max-width:640px){.shopfx .cab.right{--cw2:34vw;opacity:.42;right:-12vw}.shopfx .counter{opacity:.35;--cw2:40vw}.shopfx .shard{display:none}.card.taskcard{max-width:none}}
-@media (orientation:landscape) and (max-height:820px){.shopfx .cab.right{--cw2:clamp(150px,17vw,230px)}.shopfx .counter{--cw2:clamp(140px,18vw,240px)}}
-.rm .shopfx .glare{animation:none;display:none}
-@media (prefers-reduced-motion:reduce){.shopfx .glare{animation:none;display:none}}
+
+/* ===== v6: photographic boutique backdrop + thick floating glass panels ===== */
+/* backdrop: one fixed photo of an invented card shop (decorative pack names only, no real products); never takes taps; ends above the tab bar so the counter case stays visible */
+.shopbg{position:fixed;left:0;right:0;top:0;bottom:calc(72px + env(safe-area-inset-bottom));pointer-events:none;z-index:0;background:#05031a url(assets/boutique-bg-portrait.jpg) right bottom/cover no-repeat}
+.shopbg::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(5,3,26,.55),rgba(5,3,26,.15) 45%,transparent 62%),linear-gradient(0deg,rgba(5,3,26,.9),transparent 14%)}
+@media (orientation:landscape){.shopbg{background-image:url(assets/boutique-bg-landscape.jpg);background-position:72% bottom}}
+@media (max-width:640px){.card.taskcard{max-width:none}.shopbg{background-position:78% bottom}.shopbg::after{background:linear-gradient(90deg,rgba(5,3,26,.6),rgba(5,3,26,.35) 70%,rgba(5,3,26,.15)),linear-gradient(0deg,rgba(5,3,26,.9),transparent 14%)}}
+/* thick glass slab: iridescent rim, top specular, inner thickness, stacked edge, deep drop shadow + glow */
+.card{background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(255,255,255,.03) 22%,transparent 40%) padding-box,linear-gradient(160deg,rgba(38,28,98,.80),rgba(16,11,52,.84) 55%,rgba(10,7,36,.90)) padding-box,var(--foil) border-box;
+  border:3px solid transparent;border-radius:26px;-webkit-backdrop-filter:blur(10px) saturate(1.25);backdrop-filter:blur(10px) saturate(1.25);
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.55),inset 0 0 0 1px rgba(255,255,255,.14),inset 0 10px 22px -10px rgba(255,255,255,.35),inset 0 -14px 26px -10px rgba(0,0,0,.65),inset 0 0 34px rgba(139,92,255,.30),
+    0 3px 0 -1px rgba(255,140,240,.75),0 6px 0 -1px rgba(139,92,255,.70),0 9px 0 -1px rgba(56,232,255,.45),0 11px 0 -1px rgba(20,12,60,.95),
+    0 26px 50px -8px rgba(0,0,0,.85),0 0 34px rgba(139,92,255,.50),0 0 80px rgba(255,63,216,.20)}
+.card::before{inset:0;border-radius:23px;background:radial-gradient(ellipse 70% 38% at 22% 0,rgba(255,255,255,.20),transparent 70%),linear-gradient(100deg,transparent 55%,rgba(255,255,255,.07) 62%,transparent 70%)}
+.card::after{content:"";position:absolute;left:18px;right:18px;top:-2px;height:2px;border-radius:9px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.95) 30%,rgba(255,255,255,.95) 60%,transparent);pointer-events:none;opacity:.8}
+.card.taskcard{padding:22px 22px 18px}
+/* task rows: raised glass pills with lit edge, inner thickness and a short stacked lip */
+.task{border-width:2px;background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.03) 42%,rgba(0,0,0,.22)) padding-box,linear-gradient(180deg,rgba(28,21,78,.92),rgba(12,9,42,.95)) padding-box,linear-gradient(115deg,rgba(255,63,216,.95),rgba(139,92,255,.8) 30%,rgba(56,232,255,.95) 60%,rgba(255,227,107,.75) 85%) border-box;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -4px 10px rgba(0,0,0,.5),inset 0 0 16px rgba(139,92,255,.28),0 4px 0 -1px rgba(60,36,140,.95),0 5px 0 -1px rgba(12,8,40,.95),0 12px 20px -6px rgba(0,0,0,.85),0 0 16px rgba(139,92,255,.40)}
+.task::after{background:linear-gradient(180deg,rgba(255,255,255,.10),transparent 50%),radial-gradient(ellipse 40% 60% at 15% 0,rgba(255,255,255,.12),transparent 70%)}
+.task:active{transform:translateY(3px);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 -2px 8px rgba(0,0,0,.5),inset 0 0 16px rgba(139,92,255,.28),0 1px 0 -1px rgba(60,36,140,.95),0 4px 10px -4px rgba(0,0,0,.85),0 0 12px rgba(139,92,255,.35)}
+.task.prem{background:linear-gradient(180deg,rgba(255,240,190,.20),rgba(255,255,255,.03) 42%,rgba(0,0,0,.22)) padding-box,linear-gradient(135deg,rgba(70,48,14,.95),rgba(30,20,52,.95) 55%,rgba(18,13,51,.95)) padding-box,linear-gradient(115deg,#fff0a8,#ffc94a 35%,#ff9a2e 60%,#ffe36b) border-box;
+  box-shadow:inset 0 1px 0 rgba(255,245,200,.6),inset 0 -4px 10px rgba(0,0,0,.5),inset 0 0 18px rgba(255,190,60,.25),0 4px 0 -1px rgba(170,110,20,.95),0 5px 0 -1px rgba(40,24,6,.95),0 12px 20px -6px rgba(0,0,0,.85),0 0 24px rgba(255,190,60,.60)}
+.task.prem:active{box-shadow:inset 0 1px 0 rgba(255,245,200,.5),inset 0 -2px 8px rgba(0,0,0,.5),0 1px 0 -1px rgba(170,110,20,.95),0 4px 10px -4px rgba(0,0,0,.85),0 0 18px rgba(255,190,60,.5)}
+.taskcard .task{margin:12px 0 14px}
+.disclaimer{text-shadow:0 1px 3px #000,0 0 10px #05031a}
+.task .badge{box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 2px 4px rgba(0,0,0,.5)}
+/* Reduce Motion: same static depth, a little less glow (nothing here animates) */
+.rm .card{box-shadow:inset 0 2px 0 rgba(255,255,255,.5),inset 0 0 0 1px rgba(255,255,255,.14),inset 0 -14px 26px -10px rgba(0,0,0,.65),inset 0 0 30px rgba(139,92,255,.25),0 3px 0 -1px rgba(255,140,240,.7),0 6px 0 -1px rgba(139,92,255,.65),0 9px 0 -1px rgba(56,232,255,.4),0 11px 0 -1px rgba(20,12,60,.95),0 24px 44px -8px rgba(0,0,0,.85),0 0 18px rgba(139,92,255,.35)}
 </style>
 </head>
 <body>
-<!-- decorative boutique: invented pack names, atmosphere only, not real products -->
-<div class="shopfx" aria-hidden="true"><div class="dust"></div><div class="tube t1"></div><div class="tube t2"></div><div class="grid"></div><div class="cab right"><div class="dshelf"><div class="dpack d1"><span>CYBER<br>DRAGONS</span></div><div class="dpack d2"><span>MYSTIC<br>REALMS</span></div></div><div class="dshelf"><div class="dpack d3"><span>NEON<br>KNIGHTS</span></div><div class="dpack d5"><span>STAR<br>FORGE</span></div></div><div class="dshelf"><div class="dpack d4"><span>CRYSTAL<br>TIDES</span></div><div class="dpack d7"><span>VOLT<br>STORM</span></div></div><div class="dshelf"><div class="dpack d6"><span>SHADOW<br>BLOOM</span></div><div class="dpack d9"><span>AURORA<br>WINGS</span></div></div><div class="dshelf"><div class="dpack d5"><span>RUBY<br>COMETS</span></div><div class="dpack d7"><span>FROST<br>FANGS</span></div></div><div class="glass"></div><div class="glare"></div></div><div class="counter"><div class="dshelf"><div class="dpack d8"><span>LAVA<br>TITANS</span></div><div class="dpack d2"><span>MYSTIC<br>REALMS</span></div><div class="dpack d3"><span>NEON<br>KNIGHTS</span></div></div><div class="glass"></div></div><div class="shard h1"></div><div class="shard h2"></div></div>
+<!-- decorative boutique photo: invented pack names, atmosphere only, not real products -->
+<div class="shopbg" aria-hidden="true"></div>
 <div class="wrap">
   <header class="top">
     <div class="brand">
@@ -219,7 +207,7 @@ table{width:100%;border-collapse:collapse}td,th{padding:8px;border-bottom:1px so
   <button data-tab="admin">Admin 🔒</button>
 </nav>
 <div id="modalRoot"></div>
-<script src="engine.js?v=5"></script>
-<script src="app.js?v=5"></script>
+<script src="engine.js?v=6"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>
