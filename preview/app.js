@@ -132,7 +132,7 @@
   function viewTasks() {
     var list = D.tasks.filter(function (t) { return t.active; });
     var now = Date.now();
-    return '<div class="card"><h2>Your tasks</h2><p class="muted">Done a task? Tap it, confirm, and pick a pack for your backpack.</p>' +
+    return '<div class="card taskcard"><h2>Your tasks</h2><p class="muted">Done a task? Tap it, confirm, and pick a pack for your backpack.</p>' +
       (list.length ? list.map(function (t) {
         var n = E.doneToday(D, t.id, now);
         return '<button class="task ' + (t.premium ? 'prem' : '') + '" data-act="task" data-id="' + esc(t.id) + '"><span>' + esc(t.name) + (n ? ' <span class="badge">✓ ' + n + '× today</span>' : '') + '</span><span class="badge ' + (t.premium ? 'b-prem' : '') + '">' + (t.premium ? '★ Premium pack' : 'Pack') + '</span></button>';

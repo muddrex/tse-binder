@@ -159,10 +159,46 @@ table{width:100%;border-collapse:collapse}td,th{padding:8px;border-bottom:1px so
 .rm .spark{opacity:.6}
 .rm .card{box-shadow:0 0 0 1px rgba(255,255,255,.04),0 0 14px rgba(139,92,255,.3),0 16px 40px #0009}
 @media (prefers-reduced-motion:reduce){h1,.spark,.tcg.rev::after,.tcg.nice::after{animation:none!important}.spark{opacity:.6}}
+
+/* ===== v5: boutique display cases (decorative only: invented pack names, no real products or logos; never takes taps) ===== */
+.shopfx .cab{position:absolute;--pw:min(calc(var(--cw2) * .44),calc((100vh - 150px) / 9.4));border-radius:14px 14px 6px 6px;
+  background:linear-gradient(90deg,#1b1640,#0c0a26 8%,transparent 8% 92%,#0c0a26 92%,#1b1640) ,linear-gradient(180deg,rgba(54,30,120,.55),rgba(24,12,66,.7) 60%,rgba(40,16,90,.6));
+  border:2px solid rgba(170,140,255,.38);box-shadow:0 0 0 6px rgba(12,9,36,.85),0 0 40px rgba(139,92,255,.35),inset 0 0 40px rgba(139,92,255,.35);overflow:hidden}
+.shopfx .cab.right{--cw2:clamp(150px,25vw,320px);width:var(--cw2);right:calc(var(--cw2) * -.08);top:calc(14px + env(safe-area-inset-top));bottom:calc(92px + env(safe-area-inset-bottom));display:flex;flex-direction:column;justify-content:space-evenly;padding:22px 8% 10px}
+.shopfx .cab.right::before{content:"";position:absolute;left:6%;right:6%;top:8px;height:4px;border-radius:9px;background:#e9b8ff;box-shadow:0 0 10px 2px rgba(220,140,255,.9),0 0 40px 10px rgba(180,90,255,.35)}
+.shopfx .cab .glass,.shopfx .counter .glass{position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,rgba(255,255,255,.10) 0 6%,transparent 6% 18%,rgba(255,255,255,.07) 18% 22%,transparent 22%),linear-gradient(180deg,rgba(255,255,255,.06),transparent 30%);z-index:3}
+.shopfx .glare{position:absolute;top:-10%;bottom:-10%;left:-60%;width:40%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.14),transparent);transform:skewX(-14deg);animation:glare 9s ease-in-out infinite;z-index:3}
+@keyframes glare{0%,62%{left:-60%}100%{left:140%}}
+.shopfx .dshelf{position:relative;display:flex;justify-content:center;align-items:flex-end;gap:5%;padding-bottom:8px;z-index:1}
+.shopfx .dshelf::before{content:"";position:absolute;left:-20%;right:-20%;top:-30%;bottom:6px;background:radial-gradient(ellipse 50% 70% at 50% 0,rgba(255,180,255,.22),transparent 70%);pointer-events:none}
+.shopfx .dshelf::after{content:"";position:absolute;left:-20%;right:-20%;bottom:0;height:7px;background:linear-gradient(180deg,#f0c8ff,#9a5cff 40%,#3a1f7a);box-shadow:0 0 14px 3px rgba(220,120,255,.75),0 10px 22px rgba(139,92,255,.45)}
+.shopfx .dpack{width:var(--pw);height:calc(var(--pw) * 1.62);margin-bottom:0;flex:none}
+.shopfx .dpack span{font-size:calc(var(--pw) * .13);padding-bottom:12%}
+.dpack::after{content:"";position:absolute;left:50%;top:40%;width:70%;aspect-ratio:1;transform:translate(-50%,-50%);background:conic-gradient(from 0deg,transparent 0 10deg,rgba(255,255,255,.55) 12deg,transparent 14deg 40deg,rgba(255,255,255,.4) 44deg,transparent 46deg 80deg,rgba(255,255,255,.5) 84deg,transparent 86deg 130deg,rgba(255,255,255,.4) 134deg,transparent 136deg 180deg,rgba(255,255,255,.55) 184deg,transparent 186deg 230deg,rgba(255,255,255,.4) 234deg,transparent 236deg 280deg,rgba(255,255,255,.5) 284deg,transparent 286deg 330deg,rgba(255,255,255,.4) 334deg,transparent 336deg);border-radius:50%;-webkit-mask-image:radial-gradient(circle,#000 20%,transparent 70%);mask-image:radial-gradient(circle,#000 20%,transparent 70%);opacity:.8}
+.dpack.d4{--g:linear-gradient(160deg,#7dffb2,#1aa37a 50%,#0c2a3c);--r:3deg}.dpack.d5{--g:linear-gradient(160deg,#ffe36b,#ff8a3d 50%,#5a1230);--r:-3deg}.dpack.d6{--g:linear-gradient(160deg,#ff8ad8,#7a2bd6 55%,#1a0b40)}
+.dpack.d7{--g:linear-gradient(160deg,#9fd0ff,#3a5bff 50%,#120c44);--r:-2deg}.dpack.d8{--g:linear-gradient(160deg,#ff6b6b,#c0237a 50%,#2a0c3e);--r:2deg}.dpack.d9{--g:linear-gradient(160deg,#c6a0ff,#38e8ff 55%,#0e1a4a)}
+/* low crystal counter case, bottom-left */
+.shopfx .counter{position:absolute;--cw2:clamp(150px,24vw,300px);--pw:calc(var(--cw2) * .25);left:calc(var(--cw2) * -.06);bottom:calc(84px + env(safe-area-inset-bottom));width:var(--cw2);height:calc(var(--cw2) * .62);border-radius:10px 10px 4px 4px;
+  background:linear-gradient(180deg,rgba(80,50,170,.30),rgba(30,16,80,.55));border:2px solid rgba(170,140,255,.38);box-shadow:0 0 0 5px rgba(12,9,36,.85),0 0 34px rgba(255,63,216,.25),inset 0 0 30px rgba(139,92,255,.3);overflow:hidden;display:flex;align-items:flex-end;justify-content:center;opacity:.85}
+.shopfx .counter .dshelf{width:100%}
+.shopfx .shard{position:absolute;width:26px;height:34px;background:linear-gradient(135deg,#fff 0,#c9f6ff 25%,rgba(120,170,255,.7) 50%,rgba(255,63,216,.75) 80%,#fff);clip-path:polygon(50% 0,100% 30%,80% 100%,10% 85%,0 30%);opacity:.6}
+.shopfx .shard.h1{top:calc(30px + env(safe-area-inset-top));left:min(48vw,470px);transform:rotate(18deg)}
+.shopfx .shard.h2{top:calc(96px + env(safe-area-inset-top));left:min(56vw,540px);width:18px;height:24px;transform:rotate(-24deg)}
+/* tasks: compact list like the mockup, leaves the cases visible */
+.card.taskcard{max-width:min(600px,72vw)}
+.taskcard .task{font-size:18px;min-height:58px;padding:12px 16px 12px 26px;margin:10px 0;border-radius:16px}
+.taskcard .task::before{top:12px;bottom:12px}
+.taskcard .task.prem{min-height:62px}
+@media (min-width:641px){.disclaimer{max-width:min(600px,72vw)}}
+@media (max-width:640px){.shopfx .cab.right{--cw2:34vw;opacity:.42;right:-12vw}.shopfx .counter{opacity:.35;--cw2:40vw}.shopfx .shard{display:none}.card.taskcard{max-width:none}}
+@media (orientation:landscape) and (max-height:820px){.shopfx .cab.right{--cw2:clamp(150px,17vw,230px)}.shopfx .counter{--cw2:clamp(140px,18vw,240px)}}
+.rm .shopfx .glare{animation:none;display:none}
+@media (prefers-reduced-motion:reduce){.shopfx .glare{animation:none;display:none}}
 </style>
 </head>
 <body>
-<div class="shopfx" aria-hidden="true"><div class="dust"></div><div class="tube t1"></div><div class="tube t2"></div><div class="grid"></div></div>
+<!-- decorative boutique: invented pack names, atmosphere only, not real products -->
+<div class="shopfx" aria-hidden="true"><div class="dust"></div><div class="tube t1"></div><div class="tube t2"></div><div class="grid"></div><div class="cab right"><div class="dshelf"><div class="dpack d1"><span>CYBER<br>DRAGONS</span></div><div class="dpack d2"><span>MYSTIC<br>REALMS</span></div></div><div class="dshelf"><div class="dpack d3"><span>NEON<br>KNIGHTS</span></div><div class="dpack d5"><span>STAR<br>FORGE</span></div></div><div class="dshelf"><div class="dpack d4"><span>CRYSTAL<br>TIDES</span></div><div class="dpack d7"><span>VOLT<br>STORM</span></div></div><div class="dshelf"><div class="dpack d6"><span>SHADOW<br>BLOOM</span></div><div class="dpack d9"><span>AURORA<br>WINGS</span></div></div><div class="dshelf"><div class="dpack d5"><span>RUBY<br>COMETS</span></div><div class="dpack d7"><span>FROST<br>FANGS</span></div></div><div class="glass"></div><div class="glare"></div></div><div class="counter"><div class="dshelf"><div class="dpack d8"><span>LAVA<br>TITANS</span></div><div class="dpack d2"><span>MYSTIC<br>REALMS</span></div><div class="dpack d3"><span>NEON<br>KNIGHTS</span></div></div><div class="glass"></div></div><div class="shard h1"></div><div class="shard h2"></div></div>
 <div class="wrap">
   <header class="top">
     <div class="brand">
@@ -171,8 +207,6 @@ table{width:100%;border-collapse:collapse}td,th{padding:8px;border-bottom:1px so
       <div class="tagline">Finish a task, earn a pack, rip it, fill your binder.</div>
       <span class="spark s1" aria-hidden="true">✦</span><span class="spark s2" aria-hidden="true">✦</span><span class="spark s3" aria-hidden="true">✦</span>
     </div>
-    <!-- decorative display shelf: invented labels, atmosphere only -->
-    <div class="shelf" aria-hidden="true"><div class="dpack d1"><span>CYBER<br>DRAGONS</span></div><div class="dpack d2"><span>MYSTIC<br>REALMS</span></div><div class="dpack d3"><span>NEON<br>KNIGHTS</span></div></div>
   </header>
   <main id="view"></main>
   <p class="small disclaimer">Personal family app, preview copy. Not affiliated with or endorsed by The Pokémon Company, Nintendo, Creatures or GAME FREAK. Card data, pictures, set logos and approximate prices come from the free <a href="https://tcgdex.dev" >TCGdex</a> API. Pack wrappers are drawn by this app.</p>
@@ -185,7 +219,7 @@ table{width:100%;border-collapse:collapse}td,th{padding:8px;border-bottom:1px so
   <button data-tab="admin">Admin 🔒</button>
 </nav>
 <div id="modalRoot"></div>
-<script src="engine.js?v=4"></script>
-<script src="app.js?v=4"></script>
+<script src="engine.js?v=5"></script>
+<script src="app.js?v=5"></script>
 </body>
 </html>
