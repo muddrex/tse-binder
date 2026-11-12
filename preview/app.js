@@ -19,7 +19,7 @@
     'me04': ['#6d1a36', '#ffba08'], 'me05': ['#0b090a', '#7209b7'], 'me06': ['#2a9d8f', '#264653'], '30th': ['#c9a227', '#1d3557']
   };
 
-  var D = load(), C = loadCache(), tab = 'tasks', adminOK = false, adminTab = 'tasks', bf = { set: 'all', fav: false, tier: 'all', sort: 'number', q: '', missing: false };
+  var D = load(), C = loadCache(), tab = 'tasks', adminOK = false, adminTab = 'tasks', bf = { set: 'all', fav: false, tier: 'all', sort: 'rarity', q: '', missing: false }; // binder opens sorted rarest first
   // Backpack view options (not saved): default shows every pack, newest earned first.
   var bp = { show: 'all', sort: 'newest' };
   var $ = function (s, r) { return (r || document).querySelector(s); };
@@ -78,11 +78,15 @@
     }, function () { return d || null; });
   }
   function loadSetList() {
-    if (C.setList && Date.now() - C.setList.at < SETLIST_TTL) return Promise.resolve(C.setList.sets);
-    return Promise.all([getJSON('/series/me'), getJSON('/series/sv')]).then(function (rs) {
+    if (C.setList && C.setList.v === 2 && Date.now() - C.setList.at < SETLIST_TTL) return Promise.resolve(C.setList.sets);
+    // Newest first: TCGdex /sets sorted by releaseDate descending gives the order; if that call fails, fall back to
+    // each series' own (oldest-first) list reversed, Mega Evolution before Scarlet & Violet.
+    var byDate = getJSON('/sets?sort:field=releaseDate&sort:order=DESC').then(function (l) { return (l || []).map(function (x) { return x.id; }); }, function () { return []; });
+    return Promise.all([getJSON('/series/me'), getJSON('/series/sv'), byDate]).then(function (rs) {
       var sets = [];
-      rs.forEach(function (s) { (s.sets || []).slice().reverse().forEach(function (x) { if (!EXCLUDE_SETS[x.id] && x.logo) sets.push({ id: x.id, name: x.name, logo: x.logo, total: (x.cardCount || {}).total, series: s.name }); }); });
-      C.setList = { at: Date.now(), sets: sets }; saveCache(); return sets;
+      rs.slice(0, 2).forEach(function (s) { (s.sets || []).slice().reverse().forEach(function (x) { if (!EXCLUDE_SETS[x.id] && x.logo) sets.push({ id: x.id, name: x.name, logo: x.logo, total: (x.cardCount || {}).total, series: s.name }); }); });
+      sets = E.sortSetsNewest(sets, rs[2]);
+      C.setList = { at: Date.now(), v: 2, sets: sets }; saveCache(); return sets;
     }, function (e) { if (C.setList) return C.setList.sets; throw e; });
   }
   function preload(urls, ms) {
@@ -114,7 +118,7 @@
     document.title = (D.title || 'Task Ripper') + ' PREVIEW';
     $('#title').textContent = D.title || 'Task Ripper';
     $$('#tabs button').forEach(function (b) { b.classList.toggle('on', b.dataset.tab === tab); });
-    var sealed = D.packs.filter(function (p) { return p.status === 'sealed' || (p.status === 'opened' && p.ripSeen === false); }).length;
+    var sealed = D.packs.filter(isUnopened).length;
     $('#tabs [data-tab=backpack]').textContent = 'Backpack' + (sealed ? ' (' + sealed + ')' : '');
     var v = $('#view');
     if (tab === 'tasks') v.innerHTML = viewTasks();
@@ -172,14 +176,14 @@
     sets.forEach(function (s) { if (!C.pools[s.id]) loadPool(s.id).then(function () { if (m.isConnected) draw(m); }, function () {}); });
   }
 
-  function isUnopened(p) { return p.status === 'sealed' || (p.status === 'opened' && p.ripSeen === false); }
+  function isUnopened(p) { return E.packState(p) !== 'opened'; }
   function backpackPacks() {
     var list = D.packs.filter(function (p) { return bp.show === 'unopened' ? isUnopened(p) : bp.show === 'opened' ? !isUnopened(p) : true; });
     return list.sort(function (a, b) { return bp.sort === 'oldest' ? (a.at || 0) - (b.at || 0) : (b.at || 0) - (a.at || 0); });
   }
   function viewBackpack() {
     var nUn = D.packs.filter(isUnopened).length, nOp = D.packs.length - nUn, list = backpackPacks();
-    var chip = function (k, label) { return '<button class="btn chip' + (bp.show === k ? ' on' : '') + '" data-bpshow="' + k + '">' + label + '</button>'; };
+    var chip = function (k, label) { return '<button type="button" class="btn chip' + (bp.show === k ? ' on' : '') + '" data-bpshow="' + k + '" aria-pressed="' + (bp.show === k) + '">' + label + '</button>'; };
     return '<div class="card"><h2>Backpack</h2>' +
       '<div class="row spread"><div class="row">' + chip('all', 'All (' + D.packs.length + ')') + chip('unopened', 'Unopened (' + nUn + ')') + chip('opened', 'Opened (' + nOp + ')') + '</div>' +
       '<select data-bp="sort" aria-label="Sort packs"><option value="newest"' + (bp.sort === 'newest' ? ' selected' : '') + '>Newest first</option><option value="oldest"' + (bp.sort === 'oldest' ? ' selected' : '') + '>Oldest first</option></select></div>' +
@@ -187,7 +191,7 @@
         : '<p class="muted">' + (bp.show === 'unopened' ? 'No unopened packs. Finish a task to earn one!' : bp.show === 'opened' ? 'No opened packs yet.' : 'No packs yet. Finish a task to earn one!') + '</p>') + '</div>';
   }
   function packTile(p) {
-    var un = isUnopened(p), status = p.status === 'sealed' ? '<span class="badge b-new">Sealed</span>' : un ? '<span class="badge b-warn">Finish ripping</span>' : '<span class="badge">Opened</span>';
+    var un = isUnopened(p), status = E.packState(p) === 'sealed' ? '<span class="badge b-new">Sealed</span>' : un ? '<span class="badge b-warn">Finish ripping</span>' : '<span class="badge">Opened</span>';
     return '<button class="packTile' + (un ? '' : ' opened') + '" data-act="' + (un ? 'open' : 'packcards') + '" data-id="' + esc(p.id) + '">' + packHTML(p.setId, p.premium) + '<b>' + esc(p.setName) + '</b>' + (p.premium ? '<span class="badge b-prem">Premium</span>' : '<span class="badge">Regular</span>') + status + (p.short ? '<span class="badge b-warn">Short pack</span>' : '') +
       '<span class="small muted">' + esc(p.taskName) + '<br>Earned ' + esc(when(p.at)) + (p.openedAt && !un ? '<br>Opened ' + esc(when(p.openedAt)) : '') + '</span></button>';
   }
@@ -249,11 +253,11 @@
     var num = function (r) { return (r.e.setId || '') + ':' + String(r.e.localId || '').padStart(4, '0'); };
     var sorts = {
       number: function (a, b) { return num(a) < num(b) ? -1 : num(a) > num(b) ? 1 : 0; },
-      rarity: function (a, b) { return E.RANK[b.e.tier] - E.RANK[a.e.tier] || sorts.number(a, b); },
+      rarity: function (a, b) { return E.byRarityDesc(a.e.tier, b.e.tier) || sorts.number(a, b); },
       value: function (a, b) { if (!a.price && !b.price) return sorts.number(a, b); if (!a.price) return 1; if (!b.price) return -1; return b.price.value - a.price.value; },
       newest: function (a, b) { return (b.e.firstAt || 0) - (a.e.firstAt || 0); }
     };
-    rows.sort(sorts[bf.sort] || sorts.number);
+    rows.sort(sorts[bf.sort] || sorts.rarity);
     return rows;
   }
   function viewBinder() {
@@ -276,7 +280,7 @@
     return '<div class="card"><h2>Binder</h2><div class="row">' +
       '<select data-bf="set"><option value="all">All sets</option>' + Object.keys(setIds).map(function (id) { return '<option value="' + esc(id) + '"' + (bf.set === id ? ' selected' : '') + '>' + esc(setMeta(id).name) + '</option>'; }).join('') + '</select>' +
       '<select data-bf="tier"><option value="all">Any rarity</option>' + E.TIERS.map(function (t) { return '<option value="' + t + '"' + (bf.tier === t ? ' selected' : '') + '>' + E.TIER_LABEL[t] + '</option>'; }).join('') + '</select>' +
-      '<select data-bf="sort">' + [['number', 'Sort: card number'], ['rarity', 'Sort: rarity'], ['value', 'Sort: value'], ['newest', 'Sort: newest']].map(function (o) { return '<option value="' + o[0] + '"' + (bf.sort === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>' +
+      '<select data-bf="sort">' + [['rarity', 'Sort: rarity (rarest first)'], ['number', 'Sort: card number'], ['value', 'Sort: value'], ['newest', 'Sort: newest']].map(function (o) { return '<option value="' + o[0] + '"' + (bf.sort === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>' +
       '<label class="check"><input type="checkbox" data-bf="fav"' + (bf.fav ? ' checked' : '') + '> Favourites only</label>' +
       (bf.set !== 'all' ? '<label class="check"><input type="checkbox" data-bf="missing"' + (bf.missing ? ' checked' : '') + '> Show missing</label>' : '') +
       '<input data-bf="q" placeholder="Search name" value="' + esc(bf.q) + '" style="flex:1;min-width:150px">' +
@@ -518,15 +522,19 @@
       $('#ripCount', ov).textContent = ''; $('#ripSkip', ov).classList.add('hidden'); $('#ripZoom', ov).classList.add('hidden');
       stage.style.touchAction = 'auto'; stage.style.display = 'block'; stage.style.placeItems = 'normal'; stage.style.overflow = 'auto';
       cur = null; active = false;
+      // Reaching the recap (last card swiped, or Skip to cards) means every card has been seen: the pack is opened,
+      // even if the kid closes with the X instead of tapping Add to binder.
+      E.finishRip(p); save();
       var newCount = p.cards.filter(function (c) { return c.isNew; }).length;
       stage.innerHTML = '<div style="padding:0 16px"><h2>Your ' + p.cards.length + ' cards</h2><p class="muted">' + newCount + ' new for your binder. Hits are at the end. Tap a card to zoom in.</p>' + (p.warnings || []).map(function (w) { return '<p class="badge b-warn">' + esc(w) + '</p>'; }).join(' ') + '</div>' + zoomGrid(p) + '<div style="padding:16px 16px calc(20px + env(safe-area-inset-bottom))"><button class="btn primary" id="toBinder" style="width:100%;font-size:20px;min-height:60px">Add to binder</button></div>';
-      $('#toBinder', ov).onclick = function () { p.ripSeen = true; save(); ov.remove(); tab = 'backpack'; render(); toast(p.cards.length + ' cards added to your binder'); };
+      $('#toBinder', ov).onclick = function () { E.finishRip(p); save(); ov.remove(); tab = 'backpack'; render(); toast(p.cards.length + ' cards added to your binder'); };
     }
   }
 
   /* ---------- events ---------- */
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-act],[data-admintab],[data-zi],[data-bpshow]'); if (!t) return;
+    var tg = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement; if (!tg) return;
+    var t = tg.closest('[data-tab],[data-act],[data-admintab],[data-zi],[data-bpshow]'); if (!t) return;
     if (t.dataset.zi != null && t.dataset.zoompack) { var zp = D.packs.find(function (x) { return x.id === t.dataset.zoompack; }); if (zp && zp.cards) zoomCard(zp.cards, +t.dataset.zi); return; }
     if (t.dataset.bpshow) { bp.show = t.dataset.bpshow; render(); return; }
     if (t.dataset.tab) { tab = t.dataset.tab; render(); window.scrollTo && window.scrollTo(0, 0); return; }

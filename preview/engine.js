@@ -246,7 +246,7 @@
   function uid(p) { return (p || 'id') + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7); }
   function defaults() {
     return {
-      schema: 1, title: 'Task Ripper', pin: '1234',
+      schema: 2, title: 'Task Ripper', pin: '1234',
       tasks: [
         { id: 'demo-bed', name: 'Make your bed', premium: false, active: true },
         { id: 'demo-teeth', name: 'Brush teeth (morning and night)', premium: false, active: true },
@@ -281,6 +281,13 @@
     if (out.lastBackupAt === undefined) out.lastBackupAt = null;
     if (out.demoDefaults === undefined) out.demoDefaults = false;
     out.schema = out.schema || 1;
+    if (out.schema < 2) {
+      // Builds before schema 2 only marked a pack finished when "Add to binder" was tapped, so packs closed with the X
+      // stayed "Finish ripping" forever and the Backpack filters looked broken. Their cards were already in the binder
+      // and already shown, so treat them as fully ripped.
+      out.packs.forEach(function (p) { if (p.status === 'opened' && p.ripSeen === false) p.ripSeen = true; });
+      out.schema = 2;
+    }
     return out;
   }
   function makeBackup(D, now) { return { app: 'task-ripper', backupVersion: 1, exportedAt: new Date(now || Date.now()).toISOString(), data: D }; }
@@ -307,6 +314,25 @@
     });
     return pack;
   }
+  // Backpack state of a pack: 'sealed' (never torn), 'ripping' (torn but the kid left before seeing every card),
+  // or 'opened' (every card seen). Sealed and ripping count as Unopened in the Backpack.
+  function packState(p) {
+    if (!p || p.status !== 'opened' || !Array.isArray(p.cards)) return 'sealed';
+    return p.ripSeen === false ? 'ripping' : 'opened';
+  }
+  function finishRip(p) { if (p && p.status === 'opened') p.ripSeen = true; return p; }
+  // Newest set first. order = set ids from TCGdex /sets sorted by releaseDate descending; sets missing from it keep
+  // their incoming order after the dated ones.
+  function sortSetsNewest(sets, order) {
+    var rank = {}; (order || []).forEach(function (id, i) { if (!(id in rank)) rank[id] = i; });
+    return sets.map(function (s, i) { return { s: s, i: i }; }).sort(function (a, b) {
+      var ra = a.s.id in rank ? rank[a.s.id] : 1e9, rb = b.s.id in rank ? rank[b.s.id] : 1e9;
+      return ra - rb || a.i - b.i;
+    }).map(function (x) { return x.s; });
+  }
+  // Binder rarity sort: rarest first, using RANK (Hyper Rare > Special Illustration Rare > Illustration Rare >
+  // Ultra Rare > Double Rare > Rare > Uncommon > Common). Unknown tiers go last; callers break ties.
+  function byRarityDesc(ta, tb) { return (RANK[tb] == null ? -1 : RANK[tb]) - (RANK[ta] == null ? -1 : RANK[ta]); }
   function earnPack(D, task, set, now) {
     var comp = { id: uid('done'), taskId: task.id, taskName: task.name, premium: !!task.premium, at: now };
     var pack = { id: uid('pack'), completionId: comp.id, taskId: task.id, taskName: task.name, premium: !!task.premium, at: now, setId: set.id, setName: set.name, setLogo: set.logo || null, status: 'sealed' };
@@ -322,6 +348,6 @@
     REG_NICE: REG_NICE, SECOND_FOIL: SECOND_FOIL, PREM_LAST: PREM_LAST,
     buildPool: buildPool, tierOf: tierOf, isNice: isNice, roll: roll, mulberry32: mulberry32, niceOrder: niceOrder, setStatus: setStatus, generatePack: generatePack,
     compactPricing: compactPricing, priceFor: priceFor, fmtMoney: fmtMoney, sydDay: sydDay, weekKey: weekKey, report: report,
-    defaults: defaults, normalize: normalize, makeBackup: makeBackup, parseBackup: parseBackup, commitPack: commitPack, earnPack: earnPack, doneToday: doneToday, uid: uid
+    defaults: defaults, normalize: normalize, makeBackup: makeBackup, parseBackup: parseBackup, commitPack: commitPack, earnPack: earnPack, packState: packState, finishRip: finishRip, sortSetsNewest: sortSetsNewest, byRarityDesc: byRarityDesc, doneToday: doneToday, uid: uid
   };
 });
