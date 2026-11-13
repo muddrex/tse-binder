@@ -1,10 +1,11 @@
 // Real-browser smoke test against live TCGdex: iPad-size viewport with touch, screenshots of each step.
 // Run: python3 -m http.server 8765 (in preview/), then node browser-smoke.js [outdir]
 const puppeteer = require('puppeteer-core');
+const KEY = process.env.TR_KEY || 'task-ripper-preview'; // TR_KEY=task-ripper-v1 when serving the live root copy
 const out = process.argv[2] || '/tmp/shots';
 (async () => {
   const browser = await puppeteer.launch({ executablePath: '/usr/bin/google-chrome', headless: 'new', args: ['--no-sandbox'] });
-  const page = await browser.newPage();
+  const page = await browser.newPage(); await page.evaluateOnNewDocument(k => { window.KEY = k; }, KEY); // in-page KEY
   await page.setViewport({ width: 820, height: 1180, deviceScaleFactor: 1, hasTouch: true, isMobile: true });
   const errors = []; page.on('pageerror', e => errors.push(e.message)); page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto('http://localhost:8765/index.html', { waitUntil: 'networkidle2' });
@@ -57,7 +58,7 @@ const out = process.argv[2] || '/tmp/shots';
   await page.click('[data-tab=backpack]'); await new Promise(r => setTimeout(r, 500));
   await page.screenshot({ path: out + '/13-landscape.png' });
   const keys = await page.evaluate(() => Object.keys(localStorage));
-  const D = await page.evaluate(() => JSON.parse(localStorage.getItem('task-ripper-preview')));
+  const D = await page.evaluate(() => JSON.parse(localStorage.getItem(KEY)));
   console.log(JSON.stringify({ errors, keys, cards: D.packs[0].cards.map(c => c.tier + ':' + c.name + ':' + c.variant) }, null, 1));
   await browser.close();
 })().catch(e => { console.error(e); process.exit(1); });

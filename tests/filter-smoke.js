@@ -2,16 +2,17 @@
 // Rips one pack with taps (Reduce Motion), closes the recap with the X (no "Add to binder"), then taps each filter.
 // Run: python3 -m http.server 8765 (in preview/), then node filter-smoke.js [outdir]
 const puppeteer = require('puppeteer-core');
+const KEY = process.env.TR_KEY || 'task-ripper-preview'; // TR_KEY=task-ripper-v1 when serving the live root copy
 const out = process.argv[2] || '/tmp/shots';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
   const browser = await puppeteer.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox'] });
-  const page = await browser.newPage();
+  const page = await browser.newPage(); await page.evaluateOnNewDocument(k => { window.KEY = k; }, KEY); // in-page KEY
   await page.setViewport({ width: 820, height: 1180, hasTouch: true, isMobile: true });
   await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
   const errors = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto('http://localhost:8765/index.html', { waitUntil: 'networkidle2' });
-  await page.evaluate(() => localStorage.removeItem('task-ripper-preview')); await page.reload({ waitUntil: 'networkidle2' });
+  await page.evaluate(() => localStorage.removeItem(KEY)); await page.reload({ waitUntil: 'networkidle2' });
   const tap = async s => { const el = await page.$(s); if (!el) throw new Error('missing ' + s); await el.evaluate(x => x.scrollIntoView({ block: 'center' })); await sleep(80); const b = await el.boundingBox(); await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2); await sleep(250); };
   for (let k = 0; k < 2; k++) { await tap('.task'); await tap('[data-yes]'); await page.waitForSelector('[data-set=sv08]:not([disabled])', { timeout: 30000 }); await tap('[data-set=sv08]'); }
   await tap('[data-tab=backpack]');

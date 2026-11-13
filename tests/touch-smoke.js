@@ -3,16 +3,17 @@
 // prefers-reduced-motion: reduce (iPad Settings > Accessibility > Motion > Reduce Motion).
 // Run: python3 -m http.server 8765 (in preview/), then node touch-smoke.js [outdir]
 const puppeteer = require('puppeteer-core');
+const KEY = process.env.TR_KEY || 'task-ripper-preview'; // TR_KEY=task-ripper-v1 when serving the live root copy
 const out = process.argv[2] || '/tmp/shots';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function run(browser, rm) {
   const tag = rm ? 'rm' : 'motion';
-  const page = await browser.newPage();
+  const page = await browser.newPage(); await page.evaluateOnNewDocument(k => { window.KEY = k; }, KEY); // in-page KEY
   await page.setViewport({ width: 820, height: 1180, deviceScaleFactor: 1, hasTouch: true, isMobile: true });
   if (rm) await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
   const errors = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto('http://localhost:8765/index.html', { waitUntil: 'networkidle2' });
-  await page.evaluate(() => { localStorage.removeItem('task-ripper-preview'); }); await page.reload({ waitUntil: 'networkidle2' });
+  await page.evaluate(() => { localStorage.removeItem(KEY); }); await page.reload({ waitUntil: 'networkidle2' });
   const tapSel = async s => { const el = await page.$(s); if (!el) throw new Error("missing " + s + " " + JSON.stringify(await page.evaluate(() => ({ html: (document.querySelector("#stage")||{}).innerHTML, c: (document.querySelector("#ripCount")||{}).textContent })))); await el.evaluate(x => { const r = x.getBoundingClientRect(); if (r.top < 0 || r.bottom > innerHeight) x.scrollIntoView({ block: "center" }); }); await sleep(100); const b = await el.boundingBox(); await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2); };
   for (let k = 0; k < 2; k++) { // earn two packs a day apart-ish (order check)
     await tapSel('.task'); await tapSel('[data-yes]');
@@ -24,15 +25,16 @@ async function run(browser, rm) {
   await page.waitForSelector('#tear', { timeout: 30000 }); await sleep(500);
   const state = () => page.evaluate(() => ({ tear: !!document.querySelector('#tear'), stack: !!document.querySelector('#fl'), count: (document.querySelector('#ripCount') || {}).textContent, recap: !!document.querySelector('#toBinder'), zoom: !!document.querySelector('.zoom') }));
   const res = { tag };
+  const back = () => page.evaluate(async () => { const el = document.querySelector('#fl .cardback'); if (!el) return null; const bg = getComputedStyle(el).backgroundImage; const m = bg.match(/url\("?([^")]+)"?\)/); const st = m ? (await fetch(m[1])).status : 0; return { ripItBack: /rip-it-card-back\.webp/.test(bg), status: st, hasFront: !!document.querySelector('#fl .front img, #fl .front .tcg') }; });
   const swipe = async (x0, x1, steps = 8, ms = 16) => { await page.touchscreen.touchStart(x0, 600); for (let i = 1; i <= steps; i++) { await page.touchscreen.touchMove(x0 + (x1 - x0) * i / steps, 600); await sleep(ms); } await page.touchscreen.touchEnd(); };
   if (!rm) {
     for (let i = 0; i < 3; i++) { await page.touchscreen.tap(410, 600); await sleep(150); }
     res.afterTaps = await state();
     await swipe(150, 700); await sleep(1500);
-    res.afterTear = await state();
+    res.afterTear = await state(); res.cardBack = await back(); await page.screenshot({ path: `${out}/${tag}-1b-card-back.png` });
     await swipe(200, 650); await sleep(1300);
   } else {
-    await page.touchscreen.tap(410, 600); await sleep(200); res.afterTap1 = await state();
+    await page.touchscreen.tap(410, 600); await sleep(200); res.afterTap1 = await state(); res.cardBack = await back(); await page.screenshot({ path: `${out}/${tag}-1b-card-back.png` });
     await page.touchscreen.tap(410, 600); await sleep(200);
   }
   res.firstCard = await state();
@@ -57,9 +59,9 @@ async function run(browser, rm) {
   await tapSel('[data-bpshow=unopened]'); await sleep(200);
   res.unopenedTiles = await page.$$eval('#bpList [data-id]', a => a.length);
   await tapSel('[data-bpshow=all]'); await sleep(200);
-  res.order = await page.evaluate(() => { const D = JSON.parse(localStorage.getItem('task-ripper-preview')); return [...document.querySelectorAll('#bpList [data-id]')].map(x => D.packs.find(p => p.id === x.dataset.id).at); });
+  res.order = await page.evaluate(() => { const D = JSON.parse(localStorage.getItem(KEY)); return [...document.querySelectorAll('#bpList [data-id]')].map(x => D.packs.find(p => p.id === x.dataset.id).at); });
   await page.screenshot({ path: `${out}/${tag}-6-backpack-after.png` });
-  res.collection = await page.evaluate(() => Object.values(JSON.parse(localStorage.getItem('task-ripper-preview')).collection).reduce((a, e) => a + e.count, 0));
+  res.collection = await page.evaluate(() => Object.values(JSON.parse(localStorage.getItem(KEY)).collection).reduce((a, e) => a + e.count, 0));
   res.errors = errors; res.keys = await page.evaluate(() => Object.keys(localStorage));
   await page.close();
   return res;

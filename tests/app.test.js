@@ -4,11 +4,14 @@ const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
 const FX = require('./fixtures/tcgdex-sv08.json');
-const P = path.join(__dirname, '../preview');
+// TR_COPY=live runs the same tests against the live copy at the repo root (key task-ripper-v1).
+const LIVE = process.env.TR_COPY === 'live';
+const P = path.join(__dirname, LIVE ? '..' : '../preview');
+const KEY = LIVE ? 'task-ripper-v1' : 'task-ripper-preview';
 
 function boot(opts = {}) {
   const html = fs.readFileSync(path.join(P, 'index.html'), 'utf8').replace(/<script src="[^"]+"><\/script>/g, '');
-  const dom = new JSDOM(html, { url: 'https://muddrex.github.io/Task-Ripper/preview/', runScripts: 'outside-only', pretendToBeVisual: true });
+  const dom = new JSDOM(html, { url: LIVE ? 'https://muddrex.github.io/tse-binder/' : 'https://muddrex.github.io/Task-Ripper/preview/', runScripts: 'outside-only', pretendToBeVisual: true });
   const w = dom.window;
   if (!w.structuredClone) w.structuredClone = v => JSON.parse(JSON.stringify(v)); // test-only polyfill
   const writes = [];
@@ -46,12 +49,12 @@ const click = (w, el) => el.dispatchEvent(new w.MouseEvent('click', { bubbles: t
 
 test('first run: preview badge, demo tasks, own storage key', async () => {
   const { w, d, ls } = boot();
-  assert.match(d.title, /PREVIEW/);
-  assert.ok(d.querySelector('.b-preview'));
+  if (LIVE) { assert.doesNotMatch(d.title, /PREVIEW/); assert.ok(!d.querySelector('.b-preview')); assert.strictEqual(ls.getItem('task-ripper-preview'), null, 'live never writes the preview key'); }
+  else { assert.match(d.title, /PREVIEW/); assert.ok(d.querySelector('.b-preview')); }
   const tasks = d.querySelectorAll('[data-act=task]');
   assert.ok(tasks.length >= 2);
   assert.ok(d.querySelector('.task.prem'), 'a premium sample task');
-  const saved = JSON.parse(ls.getItem('task-ripper-preview'));
+  const saved = JSON.parse(ls.getItem(KEY));
   assert.deepStrictEqual(saved.enabledSets, ['sv08', 'sv10']); assert.strictEqual(saved.demoDefaults, true);
 });
 
@@ -64,7 +67,7 @@ test('confirm task -> choose set -> sealed pack in backpack -> rip (reduce motio
   await tick(50);
   const pick = d.querySelector('[data-set=sv08]'); assert.ok(pick, 'set picker shows Surging Sparks');
   click(w, pick);
-  let D = JSON.parse(ls.getItem('task-ripper-preview'));
+  let D = JSON.parse(ls.getItem(KEY));
   assert.strictEqual(D.packs.length, 1); assert.strictEqual(D.completions.length, 1);
   const p = D.packs[0];
   assert.strictEqual(p.status, 'sealed'); assert.strictEqual(p.premium, true); assert.strictEqual(p.setId, 'sv08');
@@ -73,7 +76,7 @@ test('confirm task -> choose set -> sealed pack in backpack -> rip (reduce motio
   const tile = d.querySelector('[data-act=open]'); assert.ok(tile);
   click(w, tile);
   await tick(200);
-  D = JSON.parse(ls.getItem('task-ripper-preview'));
+  D = JSON.parse(ls.getItem(KEY));
   assert.strictEqual(D.packs[0].status, 'opened'); assert.strictEqual(D.packs[0].cards.length, 10);
   assert.ok(D.packs[0].cards.every(c => c.setId === 'sv08'));
   assert.ok(Object.keys(D.collection).length >= 1);
@@ -90,7 +93,7 @@ test('confirm task -> choose set -> sealed pack in backpack -> rip (reduce motio
   }
   const recap = d.querySelector('#toBinder'); assert.ok(recap, 'recap only after the last card');
   click(w, recap);
-  D = JSON.parse(ls.getItem('task-ripper-preview'));
+  D = JSON.parse(ls.getItem(KEY));
   assert.strictEqual(D.packs[0].ripSeen, true);
   click(w, d.querySelector('[data-tab=binder]'));
   await tick(100);
@@ -105,7 +108,7 @@ test('confirm task -> choose set -> sealed pack in backpack -> rip (reduce motio
   click(w, d.querySelector('[data-tab=progress]'));
   assert.match(d.querySelector('#view').textContent, /Tasks done\s*1/);
   assert.match(d.querySelector('#view').textContent, /Surging Sparks.*\d+ \/ \d+/);
-  const bad = writes.filter(x => x[0] !== 'set' || !['task-ripper-preview', 'task-ripper-tcgdex-cache'].includes(x[1]));
+  const bad = writes.filter(x => x[0] !== 'set' || ![KEY, 'task-ripper-tcgdex-cache'].includes(x[1]));
   assert.deepStrictEqual(bad, [], 'only Task Ripper keys written');
   assert.strictEqual(ls.getItem('quest-tracker-v2'), '{"sentinel":"live"}');
   assert.strictEqual(ls.getItem('quest-tracker-preview'), '{"sentinel":"preview"}');
@@ -129,7 +132,7 @@ test('swipe rip: tear, flip, swipe through all cards to recap', async () => {
   swipe(300); await tick(150);
   for (let i = 0; i < 10; i++) { assert.ok(d.querySelector('#top'), 'card ' + (i + 1)); swipe(300); await tick(150); }
   assert.ok(d.querySelector('#toBinder'), 'recap after last card');
-  const D = JSON.parse(ls.getItem('task-ripper-preview'));
+  const D = JSON.parse(ls.getItem(KEY));
   assert.strictEqual(D.packs[0].cards.length, 10);
   assert.ok(w.TRE.RANK[D.packs[0].cards[9].tier] >= w.TRE.RANK.DR);
 });
@@ -264,7 +267,7 @@ test('backpack: newest packs first; All / Unopened / Opened follow the real rip 
   await ripVia(w, d, c.id, 'recap');
   click(w, d.querySelector('[data-bpshow=opened]'));
   assert.deepStrictEqual(ids(), [a.id, b.id, c.id]);
-  const saved = JSON.parse(ls.getItem('task-ripper-preview'));
+  const saved = JSON.parse(ls.getItem(KEY));
   assert.deepStrictEqual(saved.packs.map(p => w.TRE.packState(p)), ['opened', 'opened', 'opened', 'sealed']);
   assert.match(d.querySelector('[data-tab=backpack]').textContent, /Backpack \(1\)/);
 });
@@ -275,7 +278,7 @@ test('backpack: packs stuck as "Finish ripping" by older builds load as Opened',
     packs: [
       { id: 'p1', setId: 'sv08', setName: 'Surging Sparks', taskName: 'Dishes', at: T - 3000, status: 'opened', ripSeen: false, openedAt: T - 2000, cards: [{ id: 'sv08-001', name: 'X', tier: 'C' }] },
       { id: 'p2', setId: 'sv08', setName: 'Surging Sparks', taskName: 'Dishes', at: T - 1000, status: 'sealed' }] };
-  const { w, d } = boot({ seed: [['task-ripper-preview', JSON.stringify(old)]] });
+  const { w, d } = boot({ seed: [[KEY, JSON.stringify(old)]] });
   click(w, d.querySelector('[data-tab=backpack]'));
   const ids = () => [...d.querySelectorAll('#bpList [data-id]')].map(x => x.dataset.id);
   click(w, d.querySelector('[data-bpshow=unopened]')); assert.deepStrictEqual(ids(), ['p2']);
@@ -329,7 +332,7 @@ test('skip button never blocks cards being added', async () => {
   await tick(200);
   click(w, d.querySelector('#ripSkip'));
   assert.ok(d.querySelector('#toBinder'));
-  const D = JSON.parse(ls.getItem('task-ripper-preview'));
+  const D = JSON.parse(ls.getItem(KEY));
   assert.strictEqual(Object.values(D.collection).reduce((a, e) => a + e.count, 0), 10);
 });
 
@@ -344,7 +347,7 @@ test('import a minimal backup JSON through Admin; never touches Quest Tracker', 
   Object.defineProperty(input, 'files', { value: [file] });
   input.dispatchEvent(new w.Event('change', { bubbles: true }));
   await tick(100);
-  const D = JSON.parse(ls.getItem('task-ripper-preview'));
+  const D = JSON.parse(ls.getItem(KEY));
   assert.strictEqual(D.tasks.length, 1); assert.strictEqual(D.tasks[0].name, 'Feed the dog'); assert.strictEqual(D.tasks[0].premium, true);
   assert.deepStrictEqual(D.packs, []);
   assert.strictEqual(ls.getItem('quest-tracker-v2'), '{"sentinel":"live"}');
